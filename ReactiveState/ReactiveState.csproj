@@ -1,18 +1,23 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;net461;netstandard2.1;netcoreapp3.1</TargetFrameworks>
 		<ProduceReferenceAssembly>true</ProduceReferenceAssembly>
 
-		<Version>1.1.0</Version>
+		<Version>1.2.0</Version>
 		<Description>.Net Redux-inspired application state management library</Description>
 		<Authors>Ilya Chudin</Authors>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Copyright>Ilya Chudin</Copyright>
 		<Product>ReactiveState</Product>
-		<PackageReleaseNotes>Internal release</PackageReleaseNotes>
+		<PackageReleaseNotes>Internal release with net5 and nullable support</PackageReleaseNotes>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageProjectUrl>https://github.com/ili/ReactiveState</PackageProjectUrl>
 		<RepositoryUrl>git@github.com:ili/ReactiveState.git</RepositoryUrl>
+
+		<Nullable>enable</Nullable>
+		<LangVersion>Latest</LangVersion>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		
 	</PropertyGroup>
 
 	<ItemGroup>

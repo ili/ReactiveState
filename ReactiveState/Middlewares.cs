@@ -13,7 +13,7 @@ namespace ReactiveState
 			where TContext : IStateEmitter<TState>
 			=> ReducerMiddleware<TContext, TState>(null, reducers);
 
-		public static Middleware<TContext, TState> ReducerMiddleware<TContext, TState>(IStateEmitter<TState> stateEmitter, params Reducer<TState, IAction>[] reducers)
+		public static Middleware<TContext, TState> ReducerMiddleware<TContext, TState>(IStateEmitter<TState>? stateEmitter, params Reducer<TState, IAction>[] reducers)
 			where TContext : IStateEmitter<TState>
 			=> (context) =>
 			{

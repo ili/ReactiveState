@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -47,7 +47,7 @@ namespace ReactiveState
 				if (invokeParameter != null)
 					invokeParameters[i] = invokeParameter;
 				else
-					invokeParameter = GetOrDefault(pars[0], constructorParameter.ParameterType, typeof(T), constructorParameter.Name);
+					invokeParameter = GetOrDefault(pars[0], constructorParameter.ParameterType, typeof(T), constructorParameter.Name!);
 
 				invokeParameters[i] = invokeParameter;
 			}

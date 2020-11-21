@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -38,7 +38,7 @@ namespace ReactiveState
 
 		public IEnumerable<IStateTreeNode> Childs => _childs.Values;
 
-		public Expression FindGetter(Type type)
+		public Expression? FindGetter(Type type)
 		{
 			if (type == Type)
 				return Getter;
@@ -60,7 +60,7 @@ namespace ReactiveState
 			return null;
 		}
 
-		public Expression FindComposer(Type type)
+		public Expression? FindComposer(Type type)
 		{
 			if (type == Type)
 				return Composer;
@@ -86,7 +86,7 @@ namespace ReactiveState
 			return null;
 		}
 
-		public Func<TObject, TSubState> FindGetter<TSubState>()
+		public Func<TObject, TSubState>? FindGetter<TSubState>()
 		{
 			var exp = FindGetter(typeof(TSubState));
 			if (exp == null)
@@ -95,7 +95,7 @@ namespace ReactiveState
 			return (Func<TObject, TSubState>)((LambdaExpression)exp).Compile();
 		}
 
-		public Func<TObject, TSubState, TObject> FindComposer<TSubState>()
+		public Func<TObject, TSubState, TObject>? FindComposer<TSubState>()
 		{
 			var exp = FindComposer(typeof(TSubState));
 			if (exp == null)

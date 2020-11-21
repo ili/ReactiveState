@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +17,7 @@ namespace ReactiveState
 		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Type type, IStateTree<TState> stateTree)
 			=> ReadonlyStaticFields(type)
 			.Where(fi => fi.FieldType.LikeReducer(stateTree))
-			.Select(_ => _.GetValue(null))
+			.Select(_ => _.GetValue(null)!)
 			.Select(_ => ReducerWrapper(_, stateTree));
 
 		public static bool LikeReducer<TState>(this Type type, IStateTree<TState> stateTree)
@@ -44,7 +44,7 @@ namespace ReactiveState
 			where TAction: IAction
 			=> ReducerWrapper<TState>(reducer, stateTree);
 
-		public static Reducer<TState, IAction> ReducerWrapper<TState>(object arg, IStateTree<TState> stateTree)
+		public static Reducer<TState, IAction> ReducerWrapper<TState>(object arg, IStateTree<TState>? stateTree)
 		{
 			var type = arg.GetType();
 
@@ -69,7 +69,7 @@ namespace ReactiveState
 				var stateParameter = Expression.Parameter(typeof(TState));
 
 				var getterExpression = Expression.Invoke(
-					stateTree.FindGetter(actualStateType),
+					stateTree!.FindGetter(actualStateType),
 					stateParameter);
 				if (getterExpression == null)
 					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {actualStateType.FullName} type");
@@ -116,7 +116,7 @@ namespace ReactiveState
 		public static IEnumerable<Func<TStoreContext, TState, IAction, Task<IAction>>> Effects<TStoreContext, TState>(this Type type, IStateTree<TState> stateTree)
 			=> type.ReadonlyStaticFields()
 			.Where (_ => _.FieldType.LikeEffect<TStoreContext, TState>(stateTree))
-			.Select(_ => _.GetValue(null))
+			.Select(_ => _.GetValue(null)!)
 			.Select(_ => EffectWrapper<TStoreContext, TState>(_, stateTree))
 			;
 
@@ -146,14 +146,14 @@ namespace ReactiveState
 		public static IEnumerable<Func<TStoreContext, TState, Task<IAction>>> StateEffects<TStoreContext, TState>(this Type type, IStateTree<TState> stateTree)
 			=> type.ReadonlyStaticFields()
 			.Where (_ => _.FieldType.LikeStateEffect<TStoreContext, TState>(stateTree))
-			.Select(_ => _.GetValue(null))
+			.Select(_ => _.GetValue(null)!)
 			.Select(_ => StateEffectWrapper<TStoreContext, TState>(_, stateTree))
 			;
 
 		public static IEnumerable<Func<TStoreContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TStoreContext, TState>(this Type type, IStateTree<TState> stateTree)
 			=> type.ReadonlyStaticFields()
 			.Where (_ => _.FieldType.LikeObservableStateEffect<TStoreContext, TState>(stateTree))
-			.Select(_ => _.GetValue(null))
+			.Select(_ => _.GetValue(null)!)
 			.Select(_ => ObservableStateEffectWrapper<TStoreContext, TState>(_, stateTree))
 			;
 
@@ -300,7 +300,7 @@ namespace ReactiveState
 			var iifExpression = Expression.Condition(
 				Expression.Equal(Expression.Call(wrapperActionParam, mi), Expression.Constant(funcActionType)),
 				invokeExpression,
-				Expression.Constant(Task.FromResult<IAction>(null), typeof(Task<IAction>)));
+				Expression.Constant(Task. FromResult<IAction?>(null), typeof(Task<IAction>)));
 
 			var body = funcActionType == typeof(IAction)
 				? invokeExpression
@@ -479,7 +479,7 @@ namespace ReactiveState
 
 		public static IEnumerable<T> ReadonlyStaticFields<T>(this Type type)
 			=> ReadonlyStaticFields(type).Where(_ => _.FieldType == typeof(T))
-			.Select(_ => (T)_.GetValue(null));
+			.Select(_ => (T)_.GetValue(null)!);
 
 		public static IEnumerable<T> ReadonlyStaticFields<T>(this Assembly assembly)
 			=> assembly.GetTypes().SelectMany(_ => _.ReadonlyStaticFields<T>());
@@ -499,7 +499,7 @@ namespace ReactiveState
 					return $"{tp.Namespace}.{tp.Name.Substring(0, tp.Name.IndexOf('`'))}[{gt}]";
 				}
 
-				return tp.FullName;
+				return tp.FullName!;
 			});
 
 		private static ConcurrentDictionary<(Type targetType, Type patternType), bool> _likes = new ConcurrentDictionary<(Type targetType, Type patternType), bool>();
@@ -560,7 +560,7 @@ namespace ReactiveState
 			return false;
 		}
 
-		public static TField GetOrDefault<TObject, TField>(this TObject obj, Func<TObject, TField> getter, TField def = default(TField))
+		public static TField? GetOrDefault<TObject, TField>(this TObject obj, Func<TObject, TField> getter, TField def = default(TField))
 			=> obj == null ? def : getter(obj);
 
 		public static StateTreeBuilder<TObject> With<TObject, TNode>(this StateTreeBuilder<TObject> builder, Expression<Func<TObject, TNode>> getter)

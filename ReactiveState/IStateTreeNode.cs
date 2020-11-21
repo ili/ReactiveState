@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
@@ -11,8 +11,8 @@ namespace ReactiveState
 
 		IEnumerable<IStateTreeNode> Childs { get; }
 
-		Expression FindGetter(Type type);
-		Expression FindComposer(Type type);
+		Expression? FindGetter(Type type);
+		Expression? FindComposer(Type type);
 	}
 
 

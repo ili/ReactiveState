@@ -35,7 +35,7 @@ namespace ReactiveState
 			return this;
 		}
 
-		public ConstructorReducerBuilder<TState, TAction> Add<TValue>(Expression<Func<TState, TValue>> memberExpression, TValue value)
+		public ConstructorReducerBuilder<TState, TAction> Add<TValue>(Expression<Func<TState, TValue>> memberExpression, TValue? value)
 		{
 			if (memberExpression.Body.NodeType != ExpressionType.MemberAccess)
 				throw new ArgumentException("Wrong lambda body, member access expected");
@@ -74,7 +74,7 @@ namespace ReactiveState
 				}
 				else
 					invokeParameters[i] = ConstructorCloneBuilder<TState>
-						.GetOrDefault(state, constructorParameter.ParameterType, typeof(TState), constructorParameter.Name);
+						.GetOrDefault(state, constructorParameter.ParameterType, typeof(TState), constructorParameter.Name!);
 			}
 
 			return Expression.Lambda<Reducer<TState, TAction>>(
