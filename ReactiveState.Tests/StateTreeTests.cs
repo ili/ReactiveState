@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace ReactiveState.Tests
 {
@@ -52,6 +52,11 @@ namespace ReactiveState.Tests
 
 			Assert.AreEqual(512, intComposed.IntValue);
 			Assert.AreEqual(obj.StringValue, intComposed.StringValue);
+
+			var storage = new ObjectStateAccessor<SimpleState>(tree, obj);
+			Assert.AreEqual(obj.IntValue, storage.Get<int>());
+			Assert.AreEqual(obj.StringValue, storage.Get<string>());
+
 		}
 
 		[Test]

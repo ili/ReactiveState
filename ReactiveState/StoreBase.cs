@@ -7,29 +7,24 @@ using System.Threading.Tasks;
 
 namespace ReactiveState
 {
-	public abstract class StoreBase<TState, TContext> : IStore<TState>, IStateEmitter<TState>
-		where TContext : StoreBase<TState, TContext>
+	public abstract class StoreBase : IStore
 	{
-		protected readonly BehaviorSubject<TState> _states;
-		private readonly Dispatcher<TState> _dispatcher;
+		private readonly Dispatcher _dispatcher;
+		private readonly IStateAccessor _stateAccessor;
 		private readonly ConcurrentQueue<IAction> _dispatchActions = new ConcurrentQueue<IAction>();
 
-		public StoreBase(TState initialState, params Middleware<TContext, TState>[] middlewares)
+		public StoreBase(IStateAccessor initialState, params Func<Dispatcher, Dispatcher>[] middlewares)
+			: this(initialState, new DispatcherBuilder().Use(middlewares))
+		{}
+
+		public StoreBase(IStateAccessor initialState, DispatcherBuilder dispatcherBuilder)
+			: this(initialState, dispatcherBuilder.Build())
+		{}
+
+		public StoreBase(IStateAccessor initialState, Dispatcher dispatcher)
 		{
-			_dispatcher = ComposeMiddlewares(middlewares);
-
-			_states = new BehaviorSubject<TState>(initialState);
-		}
-
-		private Dispatcher<TState> ComposeMiddlewares(Middleware<TContext, TState>[] middlewares)
-		{
-			Dispatcher<TState> dispatchAction =
-				(state, action) => Task.FromResult(DispatchInternal(state, action));
-
-			for (var i = middlewares.Length - 1; i >= 0; i--)
-				dispatchAction = middlewares[i]((TContext)this)(dispatchAction);
-
-			return dispatchAction;
+			_dispatcher = dispatcher;
+			_stateAccessor = initialState;
 		}
 
 		volatile int _counter = 0;
@@ -43,7 +38,7 @@ namespace ReactiveState
 			{
 				while (_dispatchActions.TryDequeue(out var a))
 				{
-					await _dispatcher(_states.Value, a);
+					await _dispatcher(a);
 
 					if (Interlocked.Decrement(ref _counter) == 0)
 						break;
@@ -51,15 +46,7 @@ namespace ReactiveState
 			}
 		}
 
-		protected virtual TState DispatchInternal(TState state, IAction action)
-		{
-			return state;
-		}
-
-		public IObservable<TState> States() => _states.DistinctUntilChanged();
-
-		void IStateEmitter<TState>.OnNext(TState state)
-			=> _states.OnNext(state);
+		public IObservable<IStateAccessor> States() => _stateAccessor.States;
 
 		#region IDisposable Support
 		private bool _disposed = false;
@@ -70,7 +57,7 @@ namespace ReactiveState
 			{
 				if (disposing)
 				{
-					_states.OnCompleted();
+					_stateAccessor.Dispose();
 				}
 
 				_disposed = true;
