@@ -26,6 +26,7 @@ namespace ReactiveState
 					return next(context);
 				}
 			);
+
 		public static DispatcherBuilder<TState, TContext> UseNotification<TContext, TState>(
 			this DispatcherBuilder<TState, TContext> dispatcherBuilder)
 			where TContext : IDispatchContext<TState>
@@ -42,50 +43,43 @@ namespace ReactiveState
 				}
 			);
 
-/*
-		public static Middleware<TContext, TState> BeforeHookMiddleware<TContext, TState>(params Func<TState, IAction, bool>[] hooks)
-			where TContext : IStoreContext
-			=> (context) =>
+
+		public static DispatcherBuilder<TState, TContext> UseBeforeHook<TContext, TState>(this DispatcherBuilder<TState, TContext> dispatcherBuilder,
+			params Func<TState, IAction, bool>[] hooks)
+			where TContext : IDispatchContext<TState>
+			=> dispatcherBuilder.Use(next => (context) =>
 			{
-				return next => (state, action) =>
-				{
-					foreach (var h in hooks)
-						if (!h(state, action))
-							return Task.FromResult(state);
+				foreach (var h in hooks)
+					if (!h(context.OriginalState, context.Action))
+						return Task.CompletedTask;
 
-					return next(state, action);
-				};
-			};
+				return next(context);
+			});
 
-		public static Middleware<TContext, TState> BeforeHookMiddleware<TContext, TState>(params Func<TState, IAction, Task<bool>>[] hooks)
-			where TContext : IStoreContext
-			=> (context) =>
+		public static DispatcherBuilder<TState, TContext> UseBeforeHook<TContext, TState>(this DispatcherBuilder<TState, TContext> dispatcherBuilder,
+			params Func<TState, IAction, Task<bool>>[] hooks)
+			where TContext : IDispatchContext<TState>
+			=> dispatcherBuilder.Use(next => async (context) =>
 			{
-				return next => async (state, action) =>
-				{
-					foreach (var h in hooks)
-						if (!await h(state, action))
-							return state;
+				foreach (var h in hooks)
+					if (!await h(context.OriginalState, context.Action))
+						return;
 
-					return await next(state, action);
-				};
-			};
+				await next(context);
+			});
 
-		public static Middleware<TContext, TState> AfterHookMiddleware<TContext, TState>(params Action<TState, TState, IAction>[] hooks)
-			where TContext : IStoreContext
-			=> (context) =>
+		public static DispatcherBuilder<TState, TContext> UseAfterHook<TContext, TState>(this DispatcherBuilder<TState, TContext> dispatcherBuilder,
+			params Action<TState, TState?, IAction>[] hooks)
+			where TContext : IDispatchContext<TState>
+			=> dispatcherBuilder.Use(next => async (context) =>
 			{
-				return next => async (state, action) =>
-				{
-					var res = await next(state, action);
+				await next(context);
 
-					foreach (var h in hooks)
-						h(state, res, action);
+				foreach (var h in hooks)
+					h(context.OriginalState, context.NewState, context.Action);
+			});
 
-					return res;
-				};
-			};
-
+		/*
 		public static Middleware<TContext, TState> EffectMiddleware<TContext, TState>(IDispatcher dispatcher, params Func<IObservable<(TState State, IAction Action)>, IObservable<IAction>>[] effects)
 			where TContext : IStoreContext, IDispatcher
 			=> (context) =>

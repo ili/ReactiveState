@@ -48,6 +48,7 @@ namespace ReactiveState
 		public static DispatcherBuilder<TState, TContext> Use<TState, TContext>(this DispatcherBuilder<TState, TContext> dispatcherBuilder, Action<IAction> action)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(a => { action(a.Action); return Task.CompletedTask; });
+
 	}
 
 }

@@ -24,6 +24,7 @@
 
 		<Compile Include="*Action.cs"/>
 		<Compile Include="ReducerMiddlewareTests.cs"/>
+		<Compile Include="HookMiddlewareTests.cs"/>
 	</ItemGroup>
 
 	

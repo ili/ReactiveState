@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System;
 using System.Threading.Tasks;
 
@@ -11,14 +11,18 @@ namespace ReactiveState.Tests
 		public async Task Test()
 		{
 			int counter = 0;
-			var store = new Store<int>(0, 
-				Middlewares.BeforeHookMiddleware<Store<int>, int>((s, a) => s >= 0),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
-				(s, a) => a is IncrementAction? s+1: s,
-				(s, a) => a is DecrementAction? s-1: s
-				),
-				Middlewares.AfterHookMiddleware<Store<int>, int>((s1, s2, a) => counter++)
-				);
+			var dispatcher = new DispatcherBuilder<int, DispatchContext<int>>()
+				.UseBeforeHook((s, a) => s >= 0)
+				.UseReducers(
+					(s, a) => a is IncrementAction ? s + 1 : s,
+					(s, a) => a is DecrementAction ? s - 1 : s
+				)
+				.UseNotification()
+				.UseAfterHook((s1, s2, a) => counter++)
+				.Build()
+				;
+
+			var store = new Store<int>(0, dispatcher);
 
 			int? value = null;
 			store.States().Subscribe(x => value = x);
@@ -34,9 +38,9 @@ namespace ReactiveState.Tests
 			await store.Dispatch(new DecrementAction());
 			await store.Dispatch(new DecrementAction());
 			await store.Dispatch(new DecrementAction());
-			Assert.AreEqual(-1, value);
+			Assert.AreEqual(-1, value, "Before hook not working");
 
-			Assert.AreEqual(3, counter);
+			Assert.AreEqual(3, counter, "After hook is not working");
 		}
 	}
 }
