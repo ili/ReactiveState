@@ -1,7 +1,7 @@
-﻿namespace ReactiveState
+namespace ReactiveState
 {
-	public interface IStateEmitter<TState>: IStoreContext
+	public interface IStateEmitter<in TState>: IStoreContext
 	{
-		void OnNext(TState state);
+		void OnNext(TState? state);
 	}
 }

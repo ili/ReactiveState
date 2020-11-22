@@ -9,30 +9,40 @@ namespace ReactiveState
 {
 	public static class Middlewares
 	{
-		public static Middleware<TContext, TState> ReducerMiddleware<TContext, TState>(params Reducer<TState, IAction>[] reducers)
-			where TContext : IStateEmitter<TState>
-			=> ReducerMiddleware<TContext, TState>(null, reducers);
-
-		public static Middleware<TContext, TState> ReducerMiddleware<TContext, TState>(IStateEmitter<TState>? stateEmitter, params Reducer<TState, IAction>[] reducers)
-			where TContext : IStateEmitter<TState>
-			=> (context) =>
-			{
-				return next => (state, action) =>
+		public static DispatcherBuilder<TState, TContext> UseReducers<TContext, TState>(
+			this DispatcherBuilder<TState, TContext> dispatcherBuilder,
+			params Reducer<TState, IAction>[] reducers)
+			where TContext : IDispatchContext<TState>
+			=> dispatcherBuilder.Use(
+				next => (context) =>
 				{
+					var state = context.OriginalState;
+					var newState = state;
 					foreach (var r in reducers)
-					{
-						var newState = r(state, action);
+						newState = r(newState, context.Action);
 
-						if (newState?.Equals(state) == false || (newState != null && state == null))
-							(stateEmitter ?? context).OnNext(newState);
+					context.NewState = newState;
 
-						state = newState;
-					}
+					return next(context);
+				}
+			);
+		public static DispatcherBuilder<TState, TContext> UseNotification<TContext, TState>(
+			this DispatcherBuilder<TState, TContext> dispatcherBuilder)
+			where TContext : IDispatchContext<TState>
+			=> dispatcherBuilder.Use(
+				next => (context) =>
+				{
+					var state = context.OriginalState;
+					var newState = context.NewState;
 
-					return next(state, action);
-				};
-			};
+					if (newState?.Equals(state) == false || (newState != null && state == null))
+						context.StateEmitter.OnNext(newState);
 
+					return next(context);
+				}
+			);
+
+/*
 		public static Middleware<TContext, TState> BeforeHookMiddleware<TContext, TState>(params Func<TState, IAction, bool>[] hooks)
 			where TContext : IStoreContext
 			=> (context) =>
@@ -191,5 +201,6 @@ namespace ReactiveState
 					}
 				};
 			};
+*/
 	}
 }

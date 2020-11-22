@@ -1,8 +1,12 @@
-﻿namespace ReactiveState
+using System;
+
+namespace ReactiveState
 {
-	public class ComplexStore<TComplesState> : ComplexStoreBase<TComplesState, ComplexStore<TComplesState>>
+	public class ComplexStore<TComplexState> : ComplexStoreBase<TComplexState, DispatchContext<TComplexState>>
 	{
-		public ComplexStore(IStateTree<TComplesState> stateTree, TComplesState initialState, params Middleware<ComplexStore<TComplesState>, TComplesState>[] middlewares) : base(stateTree, initialState, middlewares)
+		public ComplexStore(IStateTree<TComplexState> stateTree, TComplexState initialState,
+			Dispatcher<TComplexState, DispatchContext<TComplexState>> dispatcher)
+			: base(stateTree, initialState, (a, s, se, d) => new DispatchContext<TComplexState>(a, s, se, d), dispatcher)
 		{
 		}
 	}

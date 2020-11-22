@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>netcoreapp2.1</TargetFramework>
@@ -17,5 +17,15 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ReactiveState\ReactiveState.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="*.cs"/>
+		<None Include="*.cs"/>
+
+		<Compile Include="*Action.cs"/>
+		<Compile Include="ReducerMiddlewareTests.cs"/>
+	</ItemGroup>
+
+	
 
 </Project>

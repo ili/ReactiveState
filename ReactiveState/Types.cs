@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 
 namespace ReactiveState
@@ -8,9 +8,12 @@ namespace ReactiveState
 
 	//public delegate TState Reducer<TState>(TState previousState, IAction action);
 
-	public delegate Task<TState> Dispatcher<TState>(TState state, IAction Action);
+	//public delegate Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>> Middleware<in TContext, TState>(TContext context)
+	//	where TContext : IDispatchContext<TState>;
 
-	public delegate Func<Dispatcher<TState>, Dispatcher<TState>> Middleware<in TContext, TState>(TContext context)
-		where TContext: IStoreContext;
+	public delegate Task Dispatcher<TState, TContext>(TContext context)
+		where TContext : IDispatchContext<TState>;
 
+	public delegate TContext ContextFactory<TState, TContext>(IAction action, TState state, IStateEmitter<TState> stateEmitter, IDispatcher dispatcher)
+		where TContext : IDispatchContext<TState>;
 }

@@ -1,12 +1,15 @@
-﻿using System;
+using System;
 using System.Reactive.Linq;
 
 namespace ReactiveState
 {
 	public abstract class ComplexStoreBase<TState, TContext> : StoreBase<TState, TContext>
-		where TContext: ComplexStoreBase<TState, TContext>
+		where TContext: IDispatchContext<TState>
 	{
-		protected ComplexStoreBase(IStateTree<TState> stateTree, TState initialState, params Middleware<TContext, TState>[] middlewares) : base(initialState, middlewares)
+		protected ComplexStoreBase(IStateTree<TState> stateTree, TState initialState,
+			ContextFactory<TState, TContext> contextFactory,
+			Dispatcher<TState, TContext> dispatcher)
+			: base(initialState, contextFactory, dispatcher)
 		{
 			StateTree = stateTree;
 		}
