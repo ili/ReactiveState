@@ -20,10 +20,12 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task ConcurrentCounterTest()
 		{
-			var store = new Store<int>(0,
-				Middlewares.ReducerMiddleware<Store<int>, int>(
+			var store = new Store<int>(0, new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s
-				));
+				)
+				.UseNotification()
+				.Build());
 
 			var increments = new Task[100];
 
@@ -40,8 +42,8 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task ConcurrentCounterWithEffectTest()
 		{
-			Func<int, IAction, Task<IAction>> effect =
-				async (_, a) =>
+			Func<DispatchContext<int>, int, IAction, Task<IAction>> effect =
+				async (_, __, a) =>
 				{
 					if (a is IncrementAction)
 					{
@@ -51,12 +53,15 @@ namespace ReactiveState.Tests
 					return null;
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, null, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect)
+				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is IncrementEffectAction ? s + 1 : s
-				));
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
 
 			var increments = new Task[100];
 
@@ -73,8 +78,8 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task ConcurrentCounterStateEffectTest()
 		{
-			Func<Store<int>, int, Task<IAction>> effect =
-				async (c, s) =>
+			Func<DispatchContext<int>, int, IAction, Task<IAction>> effect =
+				async (c, s, _) =>
 				{
 					if (s % 2 == 1)
 					{
@@ -84,12 +89,15 @@ namespace ReactiveState.Tests
 					return null;
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.StateEffectMiddleware<Store<int>, int>(null, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect)
+				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is IncrementEffectAction ? s + 1 : s
-				));
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
 
 			var increments = new Task[100];
 

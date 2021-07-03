@@ -10,7 +10,7 @@ namespace ReactiveState.Tests
 		[Test]
 		public async System.Threading.Tasks.Task Test()
 		{
-			var dispatcher = new DispatcherBuilder<int, DispatchContext<int>>()
+			var dispatcher = new MiddlewareBuilder<int, DispatchContext<int>>()
 				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is DecrementAction ? s - 1 : s

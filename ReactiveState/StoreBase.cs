@@ -11,11 +11,11 @@ namespace ReactiveState
 		where TContext : IDispatchContext<TState>
 	{
 		protected readonly BehaviorSubject<TState> _states;
-		private readonly Dispatcher<TState, TContext> _dispatcher;
+		private readonly Middleware<TState, TContext> _dispatcher;
 		private readonly ContextFactory<TState, TContext> _contextFactory;
 		private readonly ConcurrentQueue<IAction> _dispatchActions = new ConcurrentQueue<IAction>();
 
-		public StoreBase(TState initialState, ContextFactory<TState, TContext> contextFactory, Dispatcher<TState, TContext> dispatcher)
+		public StoreBase(TState initialState, ContextFactory<TState, TContext> contextFactory, Middleware<TState, TContext> dispatcher)
 		{
 			_dispatcher = dispatcher;
 			_contextFactory = contextFactory;
@@ -34,7 +34,7 @@ namespace ReactiveState
 				while (_dispatchActions.TryDequeue(out var a))
 				{
 					var context = _contextFactory(a, _states.Value, this, this);
-					await _dispatcher(context);
+					await _dispatcher.Dispatch(context);
 
 					if (Interlocked.Decrement(ref _counter) == 0)
 						break;
@@ -58,6 +58,7 @@ namespace ReactiveState
 				if (disposing)
 				{
 					_states.OnCompleted();
+					_dispatcher.Dispose();
 				}
 
 				_disposed = true;

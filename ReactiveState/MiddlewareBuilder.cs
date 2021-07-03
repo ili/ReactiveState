@@ -1,22 +1,25 @@
 using System;
 using System.Collections.Generic;
+using System.Reactive.Disposables;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace ReactiveState
 {
-	public class DispatcherBuilder<TState, TContext>
+	public class MiddlewareBuilder<TState, TContext>
 		where TContext : IDispatchContext<TState>
 	{
 		private readonly List<Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>>> _middlewares = new List<Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>>>();
 
-		public DispatcherBuilder<TState, TContext> Use(params Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>>[] middlewares)
+		public CompositeDisposable Free { get; } = new CompositeDisposable();
+
+		public MiddlewareBuilder<TState, TContext> Use(params Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>>[] middlewares)
 		{
 			_middlewares.AddRange(middlewares);
 			return this;
 		}
 
-		public Dispatcher<TState, TContext> Build()
+		public Middleware<TState, TContext> Build()
 		{
 			Dispatcher<TState, TContext> pipe = context => Task.CompletedTask;
 
@@ -24,7 +27,7 @@ namespace ReactiveState
 			for (var i = _middlewares.Count-1; i >= 0; i--)
 				pipe = _middlewares[i](pipe);
 
-			return pipe;
+			return  new Middleware<TState, TContext>(pipe, Free);
 		}
 
 	}
@@ -36,7 +39,7 @@ namespace ReactiveState
 		/// </summary>
 		/// <param name="dispatcherBuilder"></param>
 		/// <param name="dispatcher"></param>
-		public static DispatcherBuilder<TState, TContext> Use<TState, TContext>(this DispatcherBuilder<TState, TContext> dispatcherBuilder, Dispatcher<TState, TContext> dispatcher)
+		public static MiddlewareBuilder<TState, TContext> Use<TState, TContext>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, Dispatcher<TState, TContext> dispatcher)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(next => context => { dispatcher(context); return next(context); });
 
@@ -45,9 +48,13 @@ namespace ReactiveState
 		/// </summary>
 		/// <param name="dispatcherBuilder"></param>
 		/// <param name="action"></param>
-		public static DispatcherBuilder<TState, TContext> Use<TState, TContext>(this DispatcherBuilder<TState, TContext> dispatcherBuilder, Action<IAction> action)
+		public static MiddlewareBuilder<TState, TContext> Use<TState, TContext>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, Action<IAction> action)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(a => { action(a.Action); return Task.CompletedTask; });
+
+		public static MiddlewareBuilder<TState, TContext> Use<TState, TContext>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, Action<TContext> action)
+			where TContext : IDispatchContext<TState>
+			=> dispatcherBuilder.Use(a => { action(a); return Task.CompletedTask; });
 
 	}
 

@@ -560,7 +560,7 @@ namespace ReactiveState
 			return false;
 		}
 
-		public static TField? GetOrDefault<TObject, TField>(this TObject obj, Func<TObject, TField> getter, TField def = default(TField))
+		public static TField? ValueOrDefault<TObject, TField>(this TObject obj, Func<TObject, TField> getter, TField? def = default(TField))
 			=> obj == null ? def : getter(obj);
 
 		public static StateTreeBuilder<TObject> With<TObject, TNode>(this StateTreeBuilder<TObject> builder, Expression<Func<TObject, TNode>> getter)

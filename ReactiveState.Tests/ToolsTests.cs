@@ -155,7 +155,7 @@ namespace ReactiveState.Tests
 
 		private class Store : Store<int>
 		{
-			public Store(int initialState, params Middleware<Store<int>, int>[] middlewares) : base(initialState, middlewares)
+			public Store(int initialState, Middleware<int, DispatchContext<int>> middleware) : base(initialState, middleware)
 			{
 			}
 		}
@@ -163,7 +163,8 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task EffectWrapperTest()
 		{
-			var store = new Store(0);
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>();
+			var store = new Store(0, builder.Build());
 
 			{
 				Func<IStoreContext, int, MyAction, Task<IAction>> func = (a, b, c) => Task.FromResult((IAction)new MyAction());
@@ -350,12 +351,12 @@ namespace ReactiveState.Tests
 		{
 			ComplexState state = null;
 
-			Assert.AreEqual(0, state.GetOrDefault(_ => _.IntValue));
+			Assert.AreEqual(0, state.ValueOrDefault(_ => _.IntValue));
 
 			state = new ComplexState();
 			state.IntValue = 8890;
 
-			Assert.AreEqual(state.IntValue, state.GetOrDefault(_ => _.IntValue));
+			Assert.AreEqual(state.IntValue, state.ValueOrDefault(_ => _.IntValue));
 		}
 
 		[Test]

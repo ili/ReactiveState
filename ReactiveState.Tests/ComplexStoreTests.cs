@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System;
 using System.Threading.Tasks;
 
@@ -29,16 +29,18 @@ namespace ReactiveState.Tests
 				})
 				.Build();
 
-			var reducerMiddleware = Middlewares.ReducerMiddleware<ComplexStore<ComplexState>, ComplexState>(
-				((Reducer<int, IAction>)((int s, IAction a) => ++s)).Wrap<ComplexState, int, IAction>(stateTree),
-				((Reducer<long, IAction>)((long s, IAction a) => ++s)).Wrap<ComplexState, long, IAction>(stateTree)
-				);
+			var reducerMiddleware = new MiddlewareBuilder<ComplexState, DispatchContext<ComplexState>>()
+				.UseReducers(
+					((Reducer<int, IAction>)((int s, IAction a) => ++s)).Wrap<ComplexState, int, IAction>(stateTree),
+					((Reducer<long, IAction>)((long s, IAction a) => ++s)).Wrap<ComplexState, long, IAction>(stateTree)
+				)
+				.UseNotification();
 
 
 			var complexStote = new ComplexStore<ComplexState>(
 				stateTree,
 				null,
-				reducerMiddleware
+				reducerMiddleware.Build()
 				);
 
 			int intValue = 0;
@@ -55,7 +57,7 @@ namespace ReactiveState.Tests
 
 			Assert.AreEqual(1, intValue);
 			Assert.AreEqual(1, longValue);
-			Assert.AreEqual(3, counter);
+			Assert.AreEqual(2, counter);
 
 			Assert.IsNotNull(complexState);
 			Assert.AreEqual(1, complexState.I);

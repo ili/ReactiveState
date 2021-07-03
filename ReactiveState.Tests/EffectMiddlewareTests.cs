@@ -10,22 +10,34 @@ namespace ReactiveState.Tests
 	[TestFixture]
 	public class EffectMiddlewareTests
 	{
+		private static void WriteLine(string format, params object[] args)
+		{
+			Console.WriteLine("{0:HH:mm:ss.fff}: {1}", DateTime.Now, string.Format(format, args));
+		}
+
 		[Test]
 		public async Task Test1()
 		{
-			Func<IObservable<(int, IAction)>, IObservable<IAction>> effect =
+			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect =
 				x => x
-					.Select(_ => _.Item2)
-					.OfType<IncrementAction>()
+					.Where(_ => _.Item3 is IncrementAction)
+					.Do(_ => WriteLine("Effect: increment"))
 					.Delay(TimeSpan.FromMilliseconds(100))
-					.Select(_ => new DecrementAction());
+					.Do(_ => WriteLine("Effect: delayed"))
+					.Select(_ => (_.Item1, (IAction)new DecrementAction()))
+					.Do(_ => WriteLine("Effect: decrement"))
+					;
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
-					(s, a) => a is IncrementAction? s+1: s,
-					(s, a) => a is DecrementAction? s-1: s
-				));
+			var dispatcher = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect)
+				.UseReducers(
+					(s, a) => a is IncrementAction ? s + 1 : s,
+					(s, a) => a is DecrementAction ? s - 1 : s
+				)
+				.UseNotification()
+				.Build();
+
+			var store = new Store<int>(0, dispatcher);
 
 			int value = 0;
 			store.States().Subscribe(_ => value = _);
@@ -47,34 +59,42 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task Test2()
 		{
-			Func<IObservable<(int, IAction)>, IObservable<IAction>> effect1 =
+			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect1 =
 				x => x
-					.Select(_ => _.Item2)
-					.OfType<IncrementAction>()
+					.Where(_ => _.Item3 is IncrementAction)
 					.Select(_ => 
 						Observable.Interval(TimeSpan.FromMilliseconds(100))
-							.TakeUntil(x.Select(i => i.Item2).OfType<StopAction>()).Take(1))
+							.TakeUntil(x.Select(i => i.Item3 is StopAction)).Select(t => _.Item1).Take(1))
 					.Switch()
-					.Select(_ => new DecrementAction());
+					.Select(_ => (_, (IAction)new DecrementAction()));
 
-			Func<IObservable<(int, IAction)>, IObservable<IAction>> effect2 =
+			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect2 =
 				x => x
-					.Select(_ => _.Item2)
-					.OfType<DecrementAction>()
+					.Where(_ => _.Item3 is DecrementAction)
 					.Select(_ => Observable.Interval(TimeSpan.FromMilliseconds(100))
-							.TakeUntil(x.Select(i => i.Item2).OfType<StopAction>()).Take(1))
+							.TakeUntil(x.Select(i => i.Item3 is StopAction)).Select(t => _.Item1).Take(1))
 					.Switch()
-					.Select(_ => new IncrementAction());
+					.Select(_ => (_ , (IAction)new IncrementAction()));
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, effect1, effect2),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
-					(s, a) => a is IncrementAction? s+1: s,
-					(s, a) => a is DecrementAction? s-1: s
-				));
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(
+					effect1,
+					effect2
+				)
+				.UseReducers(
+					(s, a) => a is IncrementAction ? s + 1 : s,
+					(s, a) => a is DecrementAction ? s - 1 : s
+				)
+				.Use(c =>
+				{
+					Console.WriteLine($"{c.Action}: {c.OriginalState} -> {c.NewState}");
+				})
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
 
 			int value = 0;
-			store.States().Subscribe(_ => value = _);
+			store.States().Subscribe(_ => { value = _; Console.WriteLine("value: {0}", _); });
 
 			await store.Dispatch(new StopAction());
 			Assert.AreEqual(0, value);
@@ -110,12 +130,15 @@ namespace ReactiveState.Tests
 					return null;
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, null, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
-					(s, a) => a is IncrementAction? s+1: s,
-					(s, a) => a is DecrementAction? s-1: s
-				));
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect)
+				.UseReducers(
+					(s, a) => a is IncrementAction ? s + 1 : s,
+					(s, a) => a is DecrementAction ? s - 1 : s
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
 
 			int value = 0;
 			int counter = 0;
@@ -141,12 +164,15 @@ namespace ReactiveState.Tests
 					return null;
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, null, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
-					(s, a) => a is IncrementAction? s+1: s,
-					(s, a) => a is DecrementAction? s-1: s
-				));
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect)
+				.UseReducers(
+					(s, a) => a is IncrementAction ? s + 1 : s,
+					(s, a) => a is DecrementAction ? s - 1 : s
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
 
 			int value = 0;
 			var was1 = false;
@@ -183,12 +209,16 @@ namespace ReactiveState.Tests
 					return null;
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, null, effect, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect, effect)
+				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is DecrementAction ? s - 1 : s
-				));
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
+
 
 			int value = 0;
 			int counter = 0;
@@ -204,7 +234,7 @@ namespace ReactiveState.Tests
 		public async Task DoubleEffectAsync()
 		{
 			var effectCounter = 0;
-			Func<Store<int>, int, IAction, Task<IAction>> effect =
+			Func<DispatchContext<int>, int, IAction, Task<IAction>> effect =
 				async (s, st, a) =>
 				{
 					await Task.Delay(50);
@@ -216,13 +246,15 @@ namespace ReactiveState.Tests
 					return null;
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, effect, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect, effect)
+				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is DecrementAction ? s - 1 : s
-				));
+				)
+				.UseNotification();
 
+			var store = new Store<int>(0, builder.Build());
 			int value = 0;
 			int counter = 0;
 			store.States().Subscribe(_ => { value = _; counter++; });
@@ -244,12 +276,15 @@ namespace ReactiveState.Tests
 					throw new InvalidOperationException();
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, null, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect)
+				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is DecrementAction ? s - 1 : s
-				));
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
 
 			Assert.Throws<InvalidOperationException>(() => effect(1, null));
 
@@ -266,12 +301,16 @@ namespace ReactiveState.Tests
 					throw new InvalidOperationException();
 				};
 
-			var store = new Store<int>(0,
-				Middlewares.EffectMiddleware<Store<int>, int>(null, null, effect),
-				Middlewares.ReducerMiddleware<Store<int>, int>(
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseEffects(effect)
+				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is DecrementAction ? s - 1 : s
-				));
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
+
 
 			//Assert.Throws<InvalidOperationException>(() => effect(1, null));
 

@@ -2,7 +2,6 @@
 
 	<PropertyGroup>
 		<TargetFramework>netcoreapp2.1</TargetFramework>
-		<LangVersion>7.1</LangVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -19,12 +18,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Remove="*.cs"/>
-		<None Include="*.cs"/>
+		<!--<Compile Remove="LoggerMiddlewareTests.cs"/>-->
+		<!--<None Include="*.cs"/>
 
 		<Compile Include="*Action.cs"/>
 		<Compile Include="ReducerMiddlewareTests.cs"/>
 		<Compile Include="HookMiddlewareTests.cs"/>
+		<Compile Include="EffectMiddlewareTests.cs"/>-->
 	</ItemGroup>
 
 	

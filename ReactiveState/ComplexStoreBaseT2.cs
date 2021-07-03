@@ -8,7 +8,7 @@ namespace ReactiveState
 	{
 		protected ComplexStoreBase(IStateTree<TState> stateTree, TState initialState,
 			ContextFactory<TState, TContext> contextFactory,
-			Dispatcher<TState, TContext> dispatcher)
+			Middleware<TState, TContext> dispatcher)
 			: base(initialState, contextFactory, dispatcher)
 		{
 			StateTree = stateTree;

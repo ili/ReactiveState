@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System.Threading.Tasks;
 
 namespace ReactiveState.Tests
@@ -13,17 +13,21 @@ namespace ReactiveState.Tests
 			var @new = -1;
 			IAction action = null;
 
-				var store = new Store<int>(0, 
-					Middlewares.AfterHookMiddleware<Store<int>, int>((o, n, a) =>
-					{
-						old = o;
-						@new = n;
-						action = a;
-					}),
-					Middlewares.ReducerMiddleware<Store<int>, int>(
-					(s, a) => a is IncrementAction? s+1: s,
-					(s, a) => a is DecrementAction? s-1: s
-				));
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseAfterHook((o, n, a) =>
+				{
+					old = o;
+					@new = n;
+					action = a;
+				})
+				.UseReducers(
+					(s, a) => a is IncrementAction ? s + 1 : s,
+					(s, a) => a is DecrementAction ? s - 1 : s
+				)
+				.UseNotification();
+
+
+			var store = new Store<int>(0, builder.Build());
 
 			await store.Dispatch(new IncrementAction());
 

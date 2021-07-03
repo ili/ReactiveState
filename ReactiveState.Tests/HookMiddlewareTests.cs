@@ -11,7 +11,7 @@ namespace ReactiveState.Tests
 		public async Task Test()
 		{
 			int counter = 0;
-			var dispatcher = new DispatcherBuilder<int, DispatchContext<int>>()
+			var dispatcher = new MiddlewareBuilder<int, DispatchContext<int>>()
 				.UseBeforeHook((s, a) => s >= 0)
 				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
