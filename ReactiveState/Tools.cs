@@ -44,12 +44,12 @@ namespace ReactiveState
 			where TAction: IAction
 			=> ReducerWrapper<TState>(reducer, stateTree);
 
-		public static Reducer<TState, IAction> ReducerWrapper<TState>(object arg, IStateTree<TState>? stateTree)
+		public static Reducer<TState, IAction> ReducerWrapper<TState>(object reducer, IStateTree<TState>? stateTree)
 		{
-			var type = arg.GetType();
+			var type = reducer.GetType();
 
 			if (type == typeof(Reducer<TState, IAction>))
-				return (Reducer<TState, IAction>)arg;
+				return (Reducer<TState, IAction>)reducer;
 
 			var actualStateType = type.GetGenericArguments()[0];
 			var actionType = type.GetGenericArguments()[1];
@@ -58,7 +58,7 @@ namespace ReactiveState
 				throw new ArgumentNullException(nameof(stateTree));
 
 
-			Expression reducerExpression = Expression.Constant(arg);
+			Expression reducerExpression = Expression.Constant(reducer);
 
 			var state = Expression.Parameter(typeof(TState), "state");
 			var action = Expression.Parameter(typeof(IAction), "action");
