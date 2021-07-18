@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;net461;netstandard2.1;netcoreapp3.1</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;net461;netstandard2.1;netcoreapp3.1;net5</TargetFrameworks>
 		<ProduceReferenceAssembly>true</ProduceReferenceAssembly>
 
 		<Version>1.2.0</Version>
@@ -22,6 +22,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="System.Reactive" Version="4.4.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="ComplexState\" />
 	</ItemGroup>
 
 </Project>

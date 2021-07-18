@@ -69,12 +69,12 @@ namespace ReactiveState
 				var stateParameter = Expression.Parameter(typeof(TState));
 
 				var getterExpression = Expression.Invoke(
-					stateTree!.FindGetter(actualStateType),
+					stateTree!.FindGetter(actualStateType)!,
 					stateParameter);
 				if (getterExpression == null)
 					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {actualStateType.FullName} type");
 
-				var composer = stateTree.FindComposer(actualStateType);
+				var composer = stateTree.FindComposer(actualStateType)!;
 
 				reducerExpression = Expression.Lambda(
 					Expression.Invoke(composer,
@@ -86,8 +86,8 @@ namespace ReactiveState
 					actionParametrer);
 			}
 
-			var mi = new object().GetType().GetMethod(nameof(object.GetType));
-			var isAssignableFrom = typeof(Type).GetMethod(nameof(Type.IsAssignableFrom));
+			var mi = new object().GetType().GetMethod(nameof(object.GetType))!;
+			var isAssignableFrom = typeof(Type).GetMethod(nameof(Type.IsAssignableFrom))!;
 			var isAssignableFromExpression =
 				Expression.Call(
 					Expression.Constant(actionType),
@@ -270,8 +270,8 @@ namespace ReactiveState
 			var funcExpression = Expression.Constant(func);
 
 			Expression invokeExpression = funcContextType == null
-				? Expression.Invoke(funcExpression,                     invokeStateParam, invokeActionParam)
-				: Expression.Invoke(funcExpression, invokeContextParam, invokeStateParam, invokeActionParam);
+				? Expression.Invoke(funcExpression,                     invokeStateParam!, invokeActionParam)
+				: Expression.Invoke(funcExpression, invokeContextParam, invokeStateParam!, invokeActionParam);
 
 			if (funcReturnType.Like(typeof(Task<IAction>)))
 			{
@@ -295,7 +295,7 @@ namespace ReactiveState
 					Expression.Convert(invokeExpression, typeof(IAction)));
 			}
 
-			var mi = new object().GetType().GetMethod(nameof(object.GetType));
+			var mi = new object().GetType().GetMethod(nameof(object.GetType))!;
 
 			var iifExpression = Expression.Condition(
 				Expression.Equal(Expression.Call(wrapperActionParam, mi), Expression.Constant(funcActionType)),
@@ -355,8 +355,8 @@ namespace ReactiveState
 			var funcExpression = Expression.Constant(func);
 
 			Expression invokeExpression = funcContextType == null
-				? Expression.Invoke(funcExpression,                     invokeStateParam)
-				: Expression.Invoke(funcExpression, invokeContextParam, invokeStateParam);
+				? Expression.Invoke(funcExpression,                     invokeStateParam!)
+				: Expression.Invoke(funcExpression, invokeContextParam, invokeStateParam!);
 
 			if (funcReturnType.Like(typeof(Task<IAction>)))
 			{
@@ -439,8 +439,8 @@ namespace ReactiveState
 			var funcExpression = Expression.Constant(func);
 
 			Expression invokeExpression = funcContextType == null
-				? Expression.Invoke(funcExpression,                     invokeStateParam)
-				: Expression.Invoke(funcExpression, invokeContextParam, invokeStateParam);
+				? Expression.Invoke(funcExpression,                     invokeStateParam!)
+				: Expression.Invoke(funcExpression, invokeContextParam, invokeStateParam!);
 
 			//if (funcReturnType.Like(typeof(Task<IAction>)))
 			//{

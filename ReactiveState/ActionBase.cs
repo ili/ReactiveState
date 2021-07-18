@@ -2,7 +2,7 @@ namespace ReactiveState
 {
 	public abstract class ActionBase : IAction
 	{
-		protected string _type;
+		private string _type;
 
 		public ActionBase()
 		{
