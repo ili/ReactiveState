@@ -61,14 +61,14 @@ namespace ReactiveState.Tests
 		[Test]
 		public void ReducerTest()
 		{
-			var field = GetType().Reducers<int>(null).Single();
+			var field = GetType().Reducers<int>().Single();
 			Assert.AreEqual(2, field(1, null));
 		}
 
 		[Test]
 		public void ReducerLikeTest()
 		{
-			var field = GetType().Reducers<long>(null).ToArray();
+			var field = GetType().Reducers<long>().ToArray();
 			Assert.AreEqual(2,   field.Length);
 			Assert.AreEqual(2,   field[0](1,  null));
 			Assert.AreEqual(100, field[1](21, new MyAction()));
@@ -168,7 +168,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<IStoreContext, int, MyAction, Task<IAction>> func = (a, b, c) => Task.FromResult((IAction)new MyAction());
-				var wrapped = func.Wrap(null);
+				var wrapped = func.Wrap();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -176,7 +176,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<IStoreContext, int, MyAction, Task<MyAction>> func = (a, b, c) => Task.FromResult(new MyAction());
-				var wrapped = func.Wrap(null);
+				var wrapped = func.Wrap();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -184,7 +184,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<int, MyAction, Task<IAction>> func = (b, c) => Task.FromResult((IAction)new MyAction());
-				var wrapped = func.Wrap<Store, int, MyAction, Task<IAction>>(null);
+				var wrapped = func.Wrap<Store, int, MyAction, Task<IAction>>();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -192,7 +192,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<int, MyAction, Task<MyAction>> func = (b, c) => Task.FromResult(new MyAction());
-				var wrapped = func.Wrap<Store, int, MyAction, Task<MyAction>>(null);
+				var wrapped = func.Wrap<Store, int, MyAction, Task<MyAction>>();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -200,7 +200,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<IStoreContext, int, MyAction, IAction> func = (a, b, c) => new MyAction();
-				var wrapped = func.Wrap(null);
+				var wrapped = func.Wrap();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -208,7 +208,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<IStoreContext, int, MyAction, MyAction> func = (a, b, c) => new MyAction();
-				var wrapped = func.Wrap(null);
+				var wrapped = func.Wrap();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -216,7 +216,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<int, MyAction, IAction> func = (b, c) => new MyAction();
-				var wrapped = func.Wrap<Store, int, MyAction, IAction>(null);
+				var wrapped = func.Wrap<Store, int, MyAction, IAction>();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -224,7 +224,7 @@ namespace ReactiveState.Tests
 
 			{
 				Func<int, MyAction, MyAction> func = (b, c) => new MyAction();
-				var wrapped = func.Wrap<Store, int, MyAction, MyAction>(null);
+				var wrapped = func.Wrap<Store, int, MyAction, MyAction>();
 
 				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
 				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
@@ -239,7 +239,7 @@ namespace ReactiveState.Tests
 			var expected = Enumerable.Range(1, 16).Select(_ => $"Effect{_:00}").ToArray();
 
 			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeEffect<Store, int>(null))
+				.Where(_ => _.FieldType.LikeEffect<Store, int>())
 				.Select(_ => _.Name)
 				.OrderBy(_ => _)
 				.ToArray();
@@ -254,8 +254,8 @@ namespace ReactiveState.Tests
 		{
 			var type = GetType();
 
-			Assert.AreEqual(16, type.Effects<Store,  int>(null).Count());
-			Assert.AreEqual(0,  type.Effects<Store, long>(null).Count());
+			Assert.AreEqual(16, type.Effects<Store,  int>().Count());
+			Assert.AreEqual(0,  type.Effects<Store, long>().Count());
 		}
 
 		class ComplexState
@@ -270,48 +270,41 @@ namespace ReactiveState.Tests
 		[Test]
 		public void LikeReducerTest()
 		{
-			Assert.True(typeof(Reducer<int, IAction> ).LikeReducer<int>(null));
-			Assert.True(typeof(Reducer<int, MyAction>).LikeReducer<int>(null));
+			Assert.True(typeof(Reducer<int, IAction> ).LikeReducer<int>());
+			Assert.True(typeof(Reducer<int, MyAction>).LikeReducer<int>());
 
-			var stateTree = new StateTreeBuilder<ComplexState>()
-				.With(_ => _.IntValue, (a, b) => a)
-				.Build();
 
-			Assert.True (typeof(Reducer<ComplexState, IAction> ).LikeReducer<ComplexState>(null));
-			Assert.True (typeof(Reducer<ComplexState, MyAction>).LikeReducer<ComplexState>(null));
-			Assert.True (typeof(Reducer<int,          IAction> ).LikeReducer<ComplexState>(stateTree));
-			Assert.True (typeof(Reducer<int,          MyAction>).LikeReducer<ComplexState>(stateTree));
-			Assert.False(typeof(Reducer<int,          IAction> ).LikeReducer<ComplexState>(null));
-			Assert.False(typeof(Reducer<int,          MyAction>).LikeReducer<ComplexState>(null));
+			Assert.True (typeof(Reducer<ComplexState, IAction> ).LikeReducer<ComplexState>());
+			Assert.True (typeof(Reducer<ComplexState, MyAction>).LikeReducer<ComplexState>());
+			//Assert.True (typeof(Reducer<int,          IAction> ).LikeReducer<ComplexState>(stateTree));
+			//Assert.True (typeof(Reducer<int,          MyAction>).LikeReducer<ComplexState>(stateTree));
+			Assert.False(typeof(Reducer<int,          IAction> ).LikeReducer<ComplexState>());
+			Assert.False(typeof(Reducer<int,          MyAction>).LikeReducer<ComplexState>());
 
 		}
 
 		[Test]
 		public void LikeEffectTest2()
 		{
-			var stateTree = new StateTreeBuilder<ComplexState>()
-				.With(_ => _.IntValue, (a, b) => a)
-				.Build();
+			Assert.True (typeof(Func<                     ComplexState,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<                     ComplexState, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<Store<ComplexState>, ComplexState,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<Store<ComplexState>, ComplexState, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
 
-			Assert.True (typeof(Func<                     ComplexState,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
-			Assert.True (typeof(Func<                     ComplexState, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
-			Assert.True (typeof(Func<Store<ComplexState>, ComplexState,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
-			Assert.True (typeof(Func<Store<ComplexState>, ComplexState, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
+			Assert.False(typeof(Func<                     int,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.False(typeof(Func<                     int, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.False(typeof(Func<Store<ComplexState>, int,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.False(typeof(Func<Store<ComplexState>, int, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
 
-			Assert.False(typeof(Func<                     int,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
-			Assert.False(typeof(Func<                     int, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
-			Assert.False(typeof(Func<Store<ComplexState>, int,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
-			Assert.False(typeof(Func<Store<ComplexState>, int, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(null));
+			//Assert.True (typeof(Func<                     int,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
+			//Assert.True (typeof(Func<                     int, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
+			//Assert.True (typeof(Func<Store<ComplexState>, int,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
+			//Assert.True (typeof(Func<Store<ComplexState>, int, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
 
-			Assert.True (typeof(Func<                     int,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
-			Assert.True (typeof(Func<                     int, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
-			Assert.True (typeof(Func<Store<ComplexState>, int,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
-			Assert.True (typeof(Func<Store<ComplexState>, int, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
-
-			Assert.False(typeof(Func<                     string,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
-			Assert.False(typeof(Func<                     string, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
-			Assert.False(typeof(Func<Store<ComplexState>, string,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
-			Assert.False(typeof(Func<Store<ComplexState>, string, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
+			//Assert.False(typeof(Func<                     string,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
+			//Assert.False(typeof(Func<                     string, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
+			//Assert.False(typeof(Func<Store<ComplexState>, string,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
+			//Assert.False(typeof(Func<Store<ComplexState>, string, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
 		}
 
 		public class StoreAction: ActionBase
@@ -319,32 +312,28 @@ namespace ReactiveState.Tests
 			public int Value;
 		}
 
-		[Test]
-		public void EffectWrapperTest2()
-		{
-			var stateTree = new StateTreeBuilder<ComplexState>()
-				.With(_ => _.IntValue, (a, b) => a)
-				.Build();
+		//[Test]
+		//public void EffectWrapperTest2()
+		//{
+		//	Func<                     int,  IAction,  IAction> effect1 = (     a, b) => new StoreAction { Value = a };
+		//	Func<                     int, MyAction,  IAction> effect2 = (     a, b) => b;
+		//	Func<Store<ComplexState>, int,  IAction, MyAction> effect3 = (ctx, a, b) => new MyAction();
+		//	Func<Store<ComplexState>, int, MyAction, MyAction> effect4 = (ctx, a, b) => b;
 
-			Func<                     int,  IAction,  IAction> effect1 = (     a, b) => new StoreAction { Value = a };
-			Func<                     int, MyAction,  IAction> effect2 = (     a, b) => b;
-			Func<Store<ComplexState>, int,  IAction, MyAction> effect3 = (ctx, a, b) => new MyAction();
-			Func<Store<ComplexState>, int, MyAction, MyAction> effect4 = (ctx, a, b) => b;
+		//	Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect1));
+		//	Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect2));
+		//	Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect3));
+		//	Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect4));
 
-			Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect1, stateTree));
-			Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect2, stateTree));
-			Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect3, stateTree));
-			Assert.NotNull(Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect4, stateTree));
+		//	var wrapped = Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect1);
+		//	var action = wrapped(null, new ComplexState()
+		//		{
+		//			IntValue = 999
+		//		}, new MyAction()).Result as StoreAction;
 
-			var wrapped = Tools.EffectWrapper<Store<ComplexState>, ComplexState>(effect1, stateTree);
-			var action = wrapped(null, new ComplexState()
-				{
-					IntValue = 999
-				}, new MyAction()).Result as StoreAction;
-
-			Assert.NotNull(action);
-			Assert.AreEqual(999, action.Value);
-		}
+		//	Assert.NotNull(action);
+		//	Assert.AreEqual(999, action.Value);
+		//}
 
 		[Test]
 		public void OrDefaultTest()
@@ -376,7 +365,7 @@ namespace ReactiveState.Tests
 			var expected = Enumerable.Range(1, 8).Select(_ => $"StateEffect{_:00}").ToArray();
 
 			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeStateEffect<Store, int>(null))
+				.Where(_ => _.FieldType.LikeStateEffect<Store, int>())
 				.Select(_ => _.Name)
 				.OrderBy(_ => _)
 				.ToArray();
@@ -391,8 +380,8 @@ namespace ReactiveState.Tests
 		{
 			var type = GetType();
 
-			Assert.AreEqual(8, type.StateEffects<Store,  int>(null).Count());
-			Assert.AreEqual(0, type.StateEffects<Store, long>(null).Count());
+			Assert.AreEqual(8, type.StateEffects<Store,  int>().Count());
+			Assert.AreEqual(0, type.StateEffects<Store, long>().Count());
 		}
 
 		[Test]
@@ -403,7 +392,7 @@ namespace ReactiveState.Tests
 			var expected = Enumerable.Range(1, 2).Select(_ => $"ObservableStateEffect{_:00}").ToArray();
 
 			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeObservableStateEffect<Store, int>(null))
+				.Where(_ => _.FieldType.LikeObservableStateEffect<Store, int>())
 				.Select(_ => _.Name)
 				.OrderBy(_ => _)
 				.ToArray();
@@ -418,27 +407,23 @@ namespace ReactiveState.Tests
 		{
 			var type = GetType();
 
-			Assert.AreEqual(2, type.ObservableStateEffects<Store,  int>(null).Count());
-			Assert.AreEqual(0, type.ObservableStateEffects<Store, long>(null).Count());
+			Assert.AreEqual(2, type.ObservableStateEffects<Store,  int>().Count());
+			Assert.AreEqual(0, type.ObservableStateEffects<Store, long>().Count());
 		}
 
 		[Test]
 		public void ObservableStateEffectWrapperTest()
 		{
-			var stateTree = new StateTreeBuilder<ComplexState>()
-				.With(_ => _.IntValue, (a, b) => a)
-				.Build();
-
 			Func<IObservable<ComplexState>, IObservable<IAction>>  effect1 = (a) => Observable.Empty<IAction> ();
 			Func<IObservable<int>,          IObservable<MyAction>> effect2 = (a) => Observable.Empty<MyAction>();
 
 			Func<Store<ComplexState>, IObservable<ComplexState>, IObservable<IAction>>  effect3 = (ctx, a) => Observable.Empty<IAction>();
 			Func<Store<ComplexState>, IObservable<int>,          IObservable<MyAction>> effect4 = (ctx, a) => Observable.Empty<MyAction>();
 
-			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect1, stateTree));
-			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect2, stateTree));
-			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect3, stateTree));
-			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect4, stateTree));
+			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect1));
+			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect2));
+			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect3));
+			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect4));
 		}
 	}
 }

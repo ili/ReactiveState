@@ -107,24 +107,13 @@ namespace ReactiveState
 			});
 		}
 
-		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcher, IStateTree<TState> stateTree, params Func<TState, IAction, IAction>[] effects)
+		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcher, params Func<TState, IAction, Task<IAction>>[] effects)
 			where TContext : IDispatchContext<TState>
-			=> UseEffects(dispatcher, effects.Select(_ => _.Wrap<TContext, TState, IAction, IAction>(stateTree)).ToArray());
-
-		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcher, IStateTree<TState> stateTree, params Func<TState, IAction, Task<IAction>>[] effects)
-			where TContext : IDispatchContext<TState>
-			=> UseEffects(dispatcher, effects.Select(_ => _.Wrap<TContext, TState, IAction, Task<IAction>>(stateTree)).ToArray());
-
-		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcher, IStateTree<TState> stateTree, params Func<TContext, TState, IAction, IAction>[] effects)
-			where TContext : IDispatchContext<TState>
-			=> UseEffects(dispatcher, effects.Select(_ => _.Wrap<TContext, TState, IAction, IAction>(stateTree)).ToArray());
+			=> UseEffects(dispatcher, effects.Select(_ => _.Wrap<TContext, TState, IAction, Task<IAction>>()).ToArray());
 
 		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TState, IAction, IAction>[] effects)
 			where TContext : IDispatchContext<TState>
 			=> UseEffects(dispatcherBuilder, effects.Select<Func<TState, IAction, IAction>, Func<TContext, TState, IAction, Task<IAction>>>(e => (TContext c, TState s, IAction a) => Task.FromResult((IAction)e(s, a))).ToArray());
-		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TState, IAction, Task<IAction>>[] effects)
-			where TContext : IDispatchContext<TState>
-			=> UseEffects(dispatcherBuilder, effects.Select<Func<TState, IAction, Task<IAction>>, Func<TContext, TState, IAction, Task<IAction>>>(e => (TContext c, TState s, IAction a) => e(s, a)).ToArray());
 
 		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TContext, TState, IAction, Task<IAction>>[] effects)
 			where TContext : IDispatchContext<TState>

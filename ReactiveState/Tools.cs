@@ -11,40 +11,24 @@ namespace ReactiveState
 {
 	public static class Tools
 	{
-		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Assembly assembly, IStateTree<TState> stateTree)
-			=> assembly.GetTypes().SelectMany(_ => _.Reducers<TState>(stateTree));
+		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Assembly assembly)
+			=> assembly.GetTypes().SelectMany(_ => _.Reducers<TState>());
 
-		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Type type, IStateTree<TState> stateTree)
+		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Type type)
 			=> ReadonlyStaticFields(type)
-			.Where(fi => fi.FieldType.LikeReducer(stateTree))
+			.Where(fi => fi.FieldType.LikeReducer<TState>())
 			.Select(_ => _.GetValue(null)!)
-			.Select(_ => ReducerWrapper(_, stateTree));
+			.Select(_ => ReducerWrapper<TState>(_));
 
-		public static bool LikeReducer<TState>(this Type type, IStateTree<TState> stateTree)
-		{
-			if (!type.Like<Reducer<object, IAction>>())
-				return false;
+		public static bool LikeReducer<T>(this Type type) => type.Like<Reducer<T, IAction>>();
 
-			var actualStateType = type.GetGenericArguments()[0];
-
-			if (actualStateType == typeof(TState))
-				return true;
-
-			if (stateTree == null)
-				return false;
-
-			return stateTree.FindGetter(actualStateType) != null;
-		}
+		public static bool LikeReducer(this Type type) => type.LikeReducer<object>();
 
 		public static Reducer<TState, IAction> Wrap<TState, TAction>(this Reducer<TState, TAction> reducer)
 			where TAction: IAction
-			=> ReducerWrapper<TState>(reducer, null);
+			=> ReducerWrapper<TState>(reducer);
 
-		public static Reducer<TState, IAction> Wrap<TState, TSubState, TAction>(this Reducer<TSubState, TAction> reducer, IStateTree<TState> stateTree)
-			where TAction: IAction
-			=> ReducerWrapper<TState>(reducer, stateTree);
-
-		public static Reducer<TState, IAction> ReducerWrapper<TState>(object reducer, IStateTree<TState>? stateTree)
+		public static Reducer<TState, IAction> ReducerWrapper<TState>(object reducer)
 		{
 			var type = reducer.GetType();
 
@@ -54,37 +38,10 @@ namespace ReactiveState
 			var actualStateType = type.GetGenericArguments()[0];
 			var actionType = type.GetGenericArguments()[1];
 
-			if (typeof(TState) != actualStateType && stateTree == null)
-				throw new ArgumentNullException(nameof(stateTree));
-
-
 			Expression reducerExpression = Expression.Constant(reducer);
 
 			var state = Expression.Parameter(typeof(TState), "state");
 			var action = Expression.Parameter(typeof(IAction), "action");
-
-			if (typeof(TState) != actualStateType)
-			{
-				var actionParametrer = Expression.Parameter(actionType);
-				var stateParameter = Expression.Parameter(typeof(TState));
-
-				var getterExpression = Expression.Invoke(
-					stateTree!.FindGetter(actualStateType)!,
-					stateParameter);
-				if (getterExpression == null)
-					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {actualStateType.FullName} type");
-
-				var composer = stateTree.FindComposer(actualStateType)!;
-
-				reducerExpression = Expression.Lambda(
-					Expression.Invoke(composer,
-						stateParameter,
-						Expression.Invoke(reducerExpression, 
-							getterExpression,
-							actionParametrer)),
-					stateParameter,
-					actionParametrer);
-			}
 
 			var mi = new object().GetType().GetMethod(nameof(object.GetType))!;
 			var isAssignableFrom = typeof(Type).GetMethod(nameof(Type.IsAssignableFrom))!;
@@ -95,12 +52,10 @@ namespace ReactiveState
 					Expression.Call(action, mi)
 					);
 
-
 			var ifExpression = Expression.Condition(
 				isAssignableFromExpression,
 				Expression.Invoke(reducerExpression, state, Expression.Convert(action, actionType)),
 				state);
-
 
 			var wrapper = Expression.Lambda<Reducer<TState, IAction>>(ifExpression, state, action);
 
@@ -113,14 +68,14 @@ namespace ReactiveState
 		public static IEnumerable<Func<IObservable<(TState, IAction)>, IObservable<IAction>>> ObservableEffects<TState>(this Type type)
 			=> ReadonlyStaticFields<Func<IObservable<(TState, IAction)>, IObservable<IAction>>>(type);
 
-		public static IEnumerable<Func<TStoreContext, TState, IAction, Task<IAction>>> Effects<TStoreContext, TState>(this Type type, IStateTree<TState> stateTree)
+		public static IEnumerable<Func<TStoreContext, TState, IAction, Task<IAction>>> Effects<TStoreContext, TState>(this Type type)
 			=> type.ReadonlyStaticFields()
-			.Where (_ => _.FieldType.LikeEffect<TStoreContext, TState>(stateTree))
+			.Where (_ => _.FieldType.LikeEffect<TStoreContext, TState>())
 			.Select(_ => _.GetValue(null)!)
-			.Select(_ => EffectWrapper<TStoreContext, TState>(_, stateTree))
+			.Select(_ => EffectWrapper<TStoreContext, TState>(_))
 			;
 
-		public static bool LikeEffect<TContext, TState>(this Type type, IStateTree<TState> stateTree)
+		public static bool LikeEffect<TContext, TState>(this Type type)
 		{
 			var looksLikeEffect = 
 				type.Like<Func<TContext, object, IAction, IAction>>()       ||
@@ -137,27 +92,24 @@ namespace ReactiveState
 			if (actualStateType == typeof(TState))
 				return true;
 
-			if (stateTree == null)
-				return false;
-
-			return stateTree.FindGetter(actualStateType) != null;
+			return false;
 		}
 
-		public static IEnumerable<Func<TStoreContext, TState, Task<IAction>>> StateEffects<TStoreContext, TState>(this Type type, IStateTree<TState> stateTree)
+		public static IEnumerable<Func<TStoreContext, TState, Task<IAction>>> StateEffects<TStoreContext, TState>(this Type type)
 			=> type.ReadonlyStaticFields()
-			.Where (_ => _.FieldType.LikeStateEffect<TStoreContext, TState>(stateTree))
+			.Where (_ => _.FieldType.LikeStateEffect<TStoreContext, TState>())
 			.Select(_ => _.GetValue(null)!)
-			.Select(_ => StateEffectWrapper<TStoreContext, TState>(_, stateTree))
+			.Select(_ => StateEffectWrapper<TStoreContext, TState>(_))
 			;
 
-		public static IEnumerable<Func<TStoreContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TStoreContext, TState>(this Type type, IStateTree<TState> stateTree)
+		public static IEnumerable<Func<TStoreContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TStoreContext, TState>(this Type type)
 			=> type.ReadonlyStaticFields()
-			.Where (_ => _.FieldType.LikeObservableStateEffect<TStoreContext, TState>(stateTree))
+			.Where (_ => _.FieldType.LikeObservableStateEffect<TStoreContext, TState>())
 			.Select(_ => _.GetValue(null)!)
-			.Select(_ => ObservableStateEffectWrapper<TStoreContext, TState>(_, stateTree))
+			.Select(_ => ObservableStateEffectWrapper<TStoreContext, TState>(_))
 			;
 
-		public static bool LikeStateEffect<TContext, TState>(this Type type, IStateTree<TState> stateTree)
+		public static bool LikeStateEffect<TContext, TState>(this Type type)
 		{
 			var looksLikeEffect =
 				type.Like<Func<TContext, object, IAction>>()       ||
@@ -175,13 +127,10 @@ namespace ReactiveState
 			if (actualStateType == typeof(TState))
 				return true;
 
-			if (stateTree == null)
-				return false;
-
-			return stateTree.FindGetter(actualStateType) != null;
+			return false;
 		}
 
-		public static bool LikeObservableStateEffect<TContext, TState>(this Type type, IStateTree<TState> stateTree)
+		public static bool LikeObservableStateEffect<TContext, TState>(this Type type)
 		{
 			var looksLikeEffect =
 				type.Like<Func<TContext, IObservable<object>, IObservable<IAction>>>() ||
@@ -198,29 +147,27 @@ namespace ReactiveState
 			if (actualStateType == typeof(TState))
 				return true;
 
-			if (stateTree == null)
-				return false;
 
-			return stateTree.FindGetter(actualStateType) != null;
+			return false;
 		}
 
-		public static IEnumerable<Func<TContext, TState, IAction, Task<IAction>>> Effects<TContext, TState>(this Assembly assembly, IStateTree<TState> stateTree)
-			=> assembly.GetTypes().SelectMany(x => x.Effects<TContext, TState>(stateTree));
+		public static IEnumerable<Func<TContext, TState, IAction, Task<IAction>>> Effects<TContext, TState>(this Assembly assembly)
+			=> assembly.GetTypes().SelectMany(x => x.Effects<TContext, TState>());
 
-		public static IEnumerable<Func<TContext, TState, Task<IAction>>> StateEffects<TContext, TState>(this Assembly assembly, IStateTree<TState> stateTree)
-			=> assembly.GetTypes().SelectMany(x => x.StateEffects<TContext, TState>(stateTree));
+		public static IEnumerable<Func<TContext, TState, Task<IAction>>> StateEffects<TContext, TState>(this Assembly assembly)
+			=> assembly.GetTypes().SelectMany(x => x.StateEffects<TContext, TState>());
 
-		public static IEnumerable<Func<TContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TContext, TState>(this Assembly assembly, IStateTree<TState> stateTree)
-			=> assembly.GetTypes().SelectMany(x => x.ObservableStateEffects<TContext, TState>(stateTree));
+		public static IEnumerable<Func<TContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TContext, TState>(this Assembly assembly)
+			=> assembly.GetTypes().SelectMany(x => x.ObservableStateEffects<TContext, TState>());
 
 
-		public static Func<TContext, TState, IAction, Task<IAction>> Wrap<TContext, TState, TAction, TResult>(this Func<TState, TAction, TResult> func, IStateTree<TState> stateTree)
-			=> EffectWrapper<TContext, TState>(func, stateTree);
+		public static Func<TContext, TState, IAction, Task<IAction>> Wrap<TContext, TState, TAction, TResult>(this Func<TState, TAction, TResult> func)
+			=> EffectWrapper<TContext, TState>(func);
 
-		public static Func<TContext, TState, IAction, Task<IAction>> Wrap<TContext, TState, TAction, TResult>(this Func<TContext, TState, TAction, TResult> func, IStateTree<TState> stateTree)
-			=> EffectWrapper<TContext, TState>(func, stateTree);
+		public static Func<TContext, TState, IAction, Task<IAction>> Wrap<TContext, TState, TAction, TResult>(this Func<TContext, TState, TAction, TResult> func)
+			=> EffectWrapper<TContext, TState>(func);
 
-		public static Func<TContext, TState, IAction, Task<IAction>> EffectWrapper<TContext, TState>(object func, IStateTree<TState> stateTree)
+		public static Func<TContext, TState, IAction, Task<IAction>> EffectWrapper<TContext, TState>(object func)
 		{
 			var type = func.GetType();
 
@@ -252,16 +199,7 @@ namespace ReactiveState
 					: null;
 
 			if (!funcStateType.IsAssignableFrom(typeof(TState)))
-			{
-				if (stateTree == null)
-					throw new ArgumentNullException(nameof(stateTree));
-
-				var getterExpression = stateTree.FindGetter(funcStateType);
-				if (getterExpression == null)
-					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {funcStateType.FullName} type");
-
-				invokeStateParam = Expression.Invoke(getterExpression, wrapperStateParam);
-			}
+				throw new InvalidOperationException("Unconvinient function type");
 
 			var invokeContextParam = funcContextType == typeof(TContext) || funcContextType == null
 				? (Expression)wrapperContextParam
@@ -311,7 +249,7 @@ namespace ReactiveState
 			return wrapper.Compile();
 		}
 
-		public static Func<TContext, TState, Task<IAction>> StateEffectWrapper<TContext, TState>(object func, IStateTree<TState> stateTree)
+		public static Func<TContext, TState, Task<IAction>> StateEffectWrapper<TContext, TState>(object func)
 		{
 			var type = func.GetType();
 
@@ -337,16 +275,7 @@ namespace ReactiveState
 					: null;
 
 			if (!funcStateType.IsAssignableFrom(typeof(TState)))
-			{
-				if (stateTree == null)
-					throw new ArgumentNullException(nameof(stateTree));
-
-				var getterExpression = stateTree.FindGetter(funcStateType);
-				if (getterExpression == null)
-					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {funcStateType.FullName} type");
-
-				invokeStateParam = Expression.Invoke(getterExpression, wrapperStateParam);
-			}
+				throw new InvalidOperationException("Unconvinient function type");
 
 			var invokeContextParam = funcContextType == typeof(TContext) || funcContextType == null
 				? (Expression)wrapperContextParam
@@ -389,7 +318,7 @@ namespace ReactiveState
 			return wrapper.Compile();
 		}
 
-		public static Func<TContext, IObservable<TState>, IObservable<IAction>> ObservableStateEffectWrapper<TContext, TState>(object func, IStateTree<TState> stateTree)
+		public static Func<TContext, IObservable<TState>, IObservable<IAction>> ObservableStateEffectWrapper<TContext, TState>(object func)
 		{
 			var type = func.GetType();
 
@@ -416,21 +345,7 @@ namespace ReactiveState
 					: null;
 
 			if (!funcStateType.IsAssignableFrom(typeof(TState)))
-			{
-				if (stateTree == null)
-					throw new ArgumentNullException(nameof(stateTree));
-
-				var getterExpression = stateTree.FindGetter(funcStateType);
-				if (getterExpression == null)
-					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {funcStateType.FullName} type");
-
-				// var selectorType = typeof(Func<,>).MakeGenericType(typeof(TState), funcStateType);
-				var getter = ((LambdaExpression)getterExpression).Compile();
-
-				invokeStateParam = Expression.Call(typeof(Observable), nameof(Observable.Select),
-					new[] { typeof(TState), funcStateType },
-					wrapperStateParam, Expression.Constant(getter));
-			}
+				throw new InvalidOperationException("Unconvinient function type");
 
 			var invokeContextParam = funcContextType == typeof(TContext) || funcContextType == null
 				? (Expression)wrapperContextParam
@@ -562,11 +477,5 @@ namespace ReactiveState
 
 		public static TField? ValueOrDefault<TObject, TField>(this TObject obj, Func<TObject, TField> getter, TField? def = default(TField))
 			=> obj == null ? def : getter(obj);
-
-		public static StateTreeBuilder<TObject> With<TObject, TNode>(this StateTreeBuilder<TObject> builder, Expression<Func<TObject, TNode>> getter)
-			=> builder.With(getter, Builder.Clone<TObject>().Add(getter).Build());
-
-		public static StateTreeBuilder<TObject> With<TObject, TNode>(this StateTreeBuilder<TObject> builder, Expression<Func<TObject, TNode>> getter, IStateTree<TNode> nodeTree)
-			=> builder.With(getter, Builder.Clone<TObject>().Add(getter).Build(), nodeTree);
 	}
 }
