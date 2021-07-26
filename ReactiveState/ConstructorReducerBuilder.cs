@@ -47,7 +47,7 @@ namespace ReactiveState
 			return this;
 		}
 
-		public Expression<Reducer<TState, TAction>> Build()
+		public Expression<Reducer<TState?, TAction>> Build()
 		{
 			var action = Expression.Parameter(typeof(TAction), "action");
 			var state = Expression.Parameter(typeof(TState), "source");
@@ -77,13 +77,13 @@ namespace ReactiveState
 						.GetOrDefault(state, constructorParameter.ParameterType, typeof(TState), constructorParameter.Name!);
 			}
 
-			return Expression.Lambda<Reducer<TState, TAction>>(
+			return Expression.Lambda<Reducer<TState?, TAction>>(
 				Expression.New(constuctor, invokeParameters),
 				state, action
 				);
 		}
 
-		public Reducer<TState, TAction> Compile() => Build().Compile();
+		public Reducer<TState?, TAction> Compile() => Build().Compile();
 	}
 
 }

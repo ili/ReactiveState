@@ -9,9 +9,9 @@ namespace ReactiveState.Tests
 	{
 
 		[Test]
-		public void KeyNotFound()
+		public void IsNullIfNoKey()
 		{
-			Assert.Throws<KeyNotFoundException>(() => new State().Get<SimpleState>());
+			Assert.IsNull(new State().Get<SimpleState>());
 		}
 
 		[Test]

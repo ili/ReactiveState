@@ -8,7 +8,7 @@ namespace ReactiveState
 	{
 		IAction Action { get; }
 
-		TState OriginalState { get; }
+		TState? OriginalState { get; }
 
 		TState? NewState { get; set; }
 

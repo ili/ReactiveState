@@ -11,7 +11,7 @@ namespace ReactiveState
 	{
 		public static MiddlewareBuilder<TState, TContext> UseReducers<TContext, TState>(
 			this MiddlewareBuilder<TState, TContext> dispatcherBuilder,
-			params Reducer<TState, IAction>[] reducers)
+			params Reducer<TState?, IAction>[] reducers)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(
 				next => (context) =>
@@ -45,7 +45,7 @@ namespace ReactiveState
 
 
 		public static MiddlewareBuilder<TState, TContext> UseBeforeHook<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder,
-			params Func<TState, IAction, bool>[] hooks)
+			params Func<TState?, IAction, bool>[] hooks)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(next => (context) =>
 			{
@@ -57,7 +57,7 @@ namespace ReactiveState
 			});
 
 		public static MiddlewareBuilder<TState, TContext> UseBeforeHook<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder,
-			params Func<TState, IAction, Task<bool>>[] hooks)
+			params Func<TState?, IAction, Task<bool>>[] hooks)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(next => async (context) =>
 			{
@@ -69,7 +69,7 @@ namespace ReactiveState
 			});
 
 		public static MiddlewareBuilder<TState, TContext> UseAfterHook<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder,
-			params Action<TState, TState?, IAction>[] hooks)
+			params Action<TState?, TState?, IAction>[] hooks)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(next => async (context) =>
 			{
@@ -80,10 +80,10 @@ namespace ReactiveState
 			});
 
 		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder,
-			params Func<IObservable<(TContext Context, TState State, IAction Action)>, IObservable<(TContext Context, IAction Action)>>[] effects)
+			params Func<IObservable<(TContext Context, TState? State, IAction Action)>, IObservable<(TContext Context, IAction Action)>>[] effects)
 			where TContext : IDispatchContext<TState>
 		{
-			var requests = new Subject<(TContext Context, TState State, IAction Action)>();
+			var requests = new Subject<(TContext Context, TState? State, IAction Action)>();
 
 			dispatcherBuilder.Free.Add(
 				effects
@@ -107,15 +107,15 @@ namespace ReactiveState
 			});
 		}
 
-		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcher, params Func<TState, IAction, Task<IAction>>[] effects)
+		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcher, params Func<TState?, IAction, Task<IAction>>[] effects)
 			where TContext : IDispatchContext<TState>
-			=> UseEffects(dispatcher, effects.Select(_ => _.Wrap<TContext, TState, IAction, Task<IAction>>()).ToArray());
+			=> UseEffects(dispatcher, effects.Select(_ => _.Wrap<TContext, TState?, IAction, Task<IAction>>()).ToArray());
 
-		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TState, IAction, IAction>[] effects)
+		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TState?, IAction, IAction>[] effects)
 			where TContext : IDispatchContext<TState>
-			=> UseEffects(dispatcherBuilder, effects.Select<Func<TState, IAction, IAction>, Func<TContext, TState, IAction, Task<IAction>>>(e => (TContext c, TState s, IAction a) => Task.FromResult((IAction)e(s, a))).ToArray());
+			=> UseEffects(dispatcherBuilder, effects.Select<Func<TState?, IAction, IAction>, Func<TContext, TState?, IAction, Task<IAction>>>(e => (TContext c, TState? s, IAction a) => Task.FromResult((IAction)e(s, a))).ToArray());
 
-		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TContext, TState, IAction, Task<IAction>>[] effects)
+		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TContext, TState?, IAction, Task<IAction>>[] effects)
 			where TContext : IDispatchContext<TState>
 		{
 			return dispatcherBuilder.Use(next => async (context) =>
@@ -143,7 +143,7 @@ namespace ReactiveState
 			});
 		}
 
-		public static MiddlewareBuilder<TState, TContext> UseStateEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TContext, TState, Task<IAction>>[] effects)
+		public static MiddlewareBuilder<TState, TContext> UseStateEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, params Func<TContext, TState?, Task<IAction>>[] effects)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(
 				next => async (context) =>

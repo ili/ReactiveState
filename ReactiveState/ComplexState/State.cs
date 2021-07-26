@@ -30,7 +30,7 @@ namespace ReactiveState.ComplexState
 			=> _values.ContainsKey(key);
 
 		public T? Get<T>(string key) where T : class
-			=> _values[key] as T;
+			=> _values.TryGetValue(key, out var res) ? res as T : null as T;
 
 		public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
 			=> _values.GetEnumerator();
