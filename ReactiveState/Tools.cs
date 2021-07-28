@@ -1,3 +1,4 @@
+using ReactiveState.ComplexState;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -60,6 +61,125 @@ namespace ReactiveState
 			var wrapper = Expression.Lambda<Reducer<TState, IAction>>(ifExpression, state, action);
 
 			return wrapper.Compile();
+		}
+
+		public static Reducer<IState, IAction> BuildComplexReducer(params object[] reducers)
+		{
+			var stateParam = Expression.Parameter(typeof(IState), "state");
+			var actionParam = Expression.Parameter(typeof(IAction), "action");
+
+			var mutableState = Expression.Variable(typeof(IMutableState), "mutable");
+			var assignMutableState = Expression.Assign(mutableState,
+				Expression.Call(stateParam, typeof(IState).GetMethod(nameof(IState.BeginTransaction))!));
+
+			//var actualActionType = Expression.Variable(typeof(Type), "actualActionType");
+			//var assignActualActionType = Expression.Assign(actualActionType,
+			//	Expression.Call(actionParam, typeof(object).GetMethod(nameof(object.GetType))!));
+
+			var reducerDescriptors = reducers.Select(_ => _)
+				.Select(_ => new
+				{
+					StateType = _.GetType().GetGenericArguments()[0],
+					ActionType = _.GetType().GetGenericArguments()[1],
+					Method = _
+				})
+				.GroupBy(_ => _.ActionType)
+				.Select(_ => new
+				{
+					ActionType = _.Key,
+					Reducers = _.ToList()
+				});
+
+			var parameters = new List<ParameterExpression>();
+			var invocations = new List<Expression>();
+
+			var ifInvocations = reducerDescriptors.Select(r =>
+			{
+				//var condition = Expression.Call(
+				//	Expression.Constant(r.ActionType),
+				//	typeof(Type).GetMethod(nameof(Type.IsAssignableFrom))!,
+				//	actualActionType
+				//	);
+
+				// var condition = Expression.TypeIs(actionParam, r.ActionType);
+
+				var typedAction = Expression.Variable(r.ActionType);
+				var assignTypedAction = Expression.Assign(typedAction, Expression.TypeAs(actionParam, r.ActionType));
+				var condition = Expression.NotEqual(typedAction, Expression.Constant(null, r.ActionType));
+
+				parameters.Add(typedAction);
+				invocations.Add(assignTypedAction);
+
+				var calls = r.Reducers.Select(rd =>
+				{
+					var key = Expression.Constant(rd.StateType.FullName);
+					var getMethodInfo = typeof(IPersistentState)
+						.GetMethod(nameof(IPersistentState.Get))!
+						.MakeGenericMethod(rd.StateType);
+
+					var getValue = Expression.Call(mutableState,
+						getMethodInfo,
+						//nameof(IMutableState.Get),
+						//new[] { rd.StateType },
+						key);
+
+					var invokeReducer = Expression.Invoke(Expression.Constant(rd.Method),
+						getValue,
+						typedAction
+						);
+
+					var invokeSetter = Expression.Call(mutableState,
+						nameof(IMutableState.Set),
+						new[] { rd.StateType },
+						key,
+						invokeReducer);
+
+					return invokeSetter;
+				})
+				.ToList();
+
+				var ifExpression = Expression.IfThen(condition,
+					Expression.Block(calls));
+
+				return ifExpression;
+			})
+			.ToList();
+
+			var commitExpression = Expression.Call(mutableState,
+				typeof(IMutableState).GetMethod(nameof(IMutableState.Commit))!);
+
+			//var returnTarget = Expression.Label(typeof(IState));
+			//var returnExpression = Expression.Return(returnTarget,
+			//	commitExpression,
+			//	typeof(IState));
+
+			//var returnLabel = Expression.Label(returnTarget, Expression.Constant(null, typeof(IState)));
+
+			//invocations.Add(assignActualActionType);
+			invocations.Add(assignMutableState);
+
+			invocations.AddRange(ifInvocations);
+
+			invocations.Add(commitExpression);
+			//invocations.Add(returnExpression);
+			//invocations.Add(returnLabel);
+			parameters.Add(mutableState);
+			//parameters.Add(actualActionType);
+
+			var body = Expression.Block(/*new ParameterExpression[]
+				{
+					mutableState,
+					actualActionType
+				},*/
+				parameters,
+				invocations
+			);
+
+			var reducerExpression = Expression.Lambda<Reducer<IState, IAction>>(body,
+				stateParam,
+				actionParam);
+
+			return reducerExpression.Compile();
 		}
 
 		public static IEnumerable<Func<IObservable<(TState, IAction)>, IObservable<IAction>>> ObservableEffects<TState>(this Assembly assembly)

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using ReactiveState.ComplexState;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -424,6 +425,44 @@ namespace ReactiveState.Tests
 			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect2));
 			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect3));
 			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect4));
+		}
+
+		public class SubState1 { }
+		public class SubState2 { }
+		public class SubState3 { }
+
+		public class SubSate1Action : ActionBase { }
+		public class SubSate23Action : ActionBase { }
+
+		[Test]
+		public void BuildComplexReducerTest()
+		{
+			var reducer = Tools.BuildComplexReducer(
+				(Reducer<IAction, IAction>)((IAction? p, IAction a) => a),
+				(Reducer<SubState1, SubSate1Action>)((SubState1? p, SubSate1Action a) => new SubState1()),
+				(Reducer<SubState2, SubSate23Action>)((SubState2? p, SubSate23Action a) => new SubState2()),
+				(Reducer<SubState3, SubSate23Action>)((SubState3? p, SubSate23Action a) => new SubState3())
+				);
+
+			Assert.NotNull(reducer);
+
+			var orig = new State();
+			var res1 = reducer(orig, new SubSate1Action())!;
+			Assert.NotNull(res1);
+			Assert.AreNotEqual(orig, res1);
+			Assert.NotNull(res1.Get<SubState1>());
+			Assert.Null(res1.Get<SubState2>());
+			Assert.Null(res1.Get<SubState3>());
+			Assert.That(res1.Get<IAction>() is SubSate1Action);
+
+			var res2 = reducer(res1, new SubSate23Action())!;
+			Assert.NotNull(res2);
+			Assert.AreNotEqual(orig, res2);
+			Assert.NotNull(res2.Get<SubState1>());
+			Assert.NotNull(res2.Get<SubState2>());
+			Assert.NotNull(res2.Get<SubState3>());
+			Assert.That(res2.Get<IAction>() is SubSate23Action);
+
 		}
 	}
 }

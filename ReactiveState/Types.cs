@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace ReactiveState
 {
-	public delegate TState Reducer<TState, in TAction>(TState? previousState, TAction action)
+	public delegate TState? Reducer<TState, in TAction>(TState? previousState, TAction action)
 		where TAction: IAction;
 
 	//public delegate TState Reducer<TState>(TState previousState, IAction action);
