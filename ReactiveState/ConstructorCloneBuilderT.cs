@@ -41,7 +41,7 @@ namespace ReactiveState
 			for (var i = 0; i < constructorParameters.Length; i++)
 			{
 				var constructorParameter = constructorParameters[i];
-				Expression invokeParameter = pars.Where(_ => _.Name.Equals(constructorParameter.Name, StringComparison.OrdinalIgnoreCase))
+				Expression? invokeParameter = pars.Where(_ => _.Name!.Equals(constructorParameter.Name, StringComparison.OrdinalIgnoreCase))
 					.FirstOrDefault();
 
 				if (invokeParameter != null)
@@ -65,7 +65,7 @@ namespace ReactiveState
 			Expression def = Expression.Default(parameterType);
 			if (parameterType.IsArray)
 			{
-				var elementType = parameterType.GetElementType();
+				var elementType = parameterType.GetElementType()!;
 				def = Expression.NewArrayInit(elementType);
 			}
 

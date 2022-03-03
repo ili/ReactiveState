@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;net461;netstandard2.1;netcoreapp3.1</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;net461;net5.0;net6.0</TargetFrameworks>
 		<ProduceReferenceAssembly>true</ProduceReferenceAssembly>
 
-		<Version>1.2.0</Version>
+		<Version>1.3.0</Version>
 		<Description>.Net Redux-inspired application state management library</Description>
 		<Authors>Ilya Chudin</Authors>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -21,7 +21,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.Reactive" Version="4.4.1" />
+		<PackageReference Include="System.Reactive" Version="5.0.0" />
 	</ItemGroup>
 
 </Project>
