@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading;
@@ -18,14 +19,17 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task Test1()
 		{
+			var autoResetEvent = new AutoResetEvent(false);
 			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect =
 				x => x
 					.Where(_ => _.Item3 is IncrementAction)
 					.Do(_ => WriteLine("Effect: increment"))
 					.Delay(TimeSpan.FromMilliseconds(100))
 					.Do(_ => WriteLine("Effect: delayed"))
+					//.Do(_ => autoResetEvent.WaitOne())
 					.Select(_ => (_.Item1, (IAction)new DecrementAction()))
 					.Do(_ => WriteLine("Effect: decrement"))
+					.Do(_ => autoResetEvent.Set())
 					;
 
 			var dispatcher = new MiddlewareBuilder<int, DispatchContext<int>>()
@@ -45,14 +49,15 @@ namespace ReactiveState.Tests
 			await store.Dispatch(new IncrementAction());
 			Assert.AreEqual(1, value);
 
-			var res = await store.States().Skip(1).FirstAsync();
+			autoResetEvent.WaitOne();
+			await Task.Delay(100);
 			Assert.AreEqual(0, value);
 
 			await store.Dispatch(new IncrementAction());
-			await store.States().Skip(1).FirstAsync();
 			Assert.AreEqual(1, value);
 
-			var res2 = await store.States().Skip(1).FirstAsync();
+			autoResetEvent.WaitOne();
+			await Task.Delay(100);
 			Assert.AreEqual(0, value);
 		}
 
@@ -62,19 +67,39 @@ namespace ReactiveState.Tests
 			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect1 =
 				x => x
 					.Where(_ => _.Item3 is IncrementAction)
-					.Select(_ => 
+					.Take(1)
+					.RepeatWhen(_ => _.Select(n => x.Select(i => i.Item3 is StopAction).Where(_ => _)).Switch())
+					.Do(_ => Debug.WriteLine("Begin DEcrement"))
+					//.RetryWhen(_ => x.Select(i => i.Item3 is StopAction).Where(_ => _))
+					.SelectMany(_ => 
 						Observable.Interval(TimeSpan.FromMilliseconds(100))
-							.TakeUntil(x.Select(i => i.Item3 is StopAction)).Select(t => _.Item1).Take(1))
-					.Switch()
-					.Select(_ => (_, (IAction)new DecrementAction()));
+							.Do(_ => Debug.WriteLine("	On DEcrement Timer"))
+							.TakeUntil(x.Select(i => i.Item3 is StopAction).Where(_ => _).Take(1).Do(_ => Debug.WriteLine("Stop DEcrement")))
+							.Select(t => _.Item1))
+					//.Switch()
+					.Select(_ =>
+					{
+						Debug.WriteLine("		Send DecrementAction Effect");
+						return (_, (IAction)new DecrementAction());
+					})
+					;
 
 			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect2 =
 				x => x
 					.Where(_ => _.Item3 is DecrementAction)
-					.Select(_ => Observable.Interval(TimeSpan.FromMilliseconds(100))
-							.TakeUntil(x.Select(i => i.Item3 is StopAction)).Select(t => _.Item1).Take(1))
-					.Switch()
-					.Select(_ => (_ , (IAction)new IncrementAction()));
+					.Take(1)
+					.RepeatWhen(_ => _.Select(n => x.Select(i => i.Item3 is StopAction).Where(_ => _)).Switch())
+					.Do(_ => Debug.WriteLine("Begin INcrement"))
+					.SelectMany(_ => Observable.Interval(TimeSpan.FromMilliseconds(100))
+							.Do(_ => Debug.WriteLine("	On INcrement Timer"))
+							.TakeUntil(x.Select(i => i.Item3 is StopAction).Where(_ => _).Do(_ => Debug.WriteLine("Stop INcrement")))
+							.Select(t => _.Item1))
+					//.Switch()
+					.Select(_ =>
+					{
+						Debug.WriteLine("		Send IncrementAction Effect");
+						return (_, (IAction)new IncrementAction());
+					});
 
 			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
 				.UseEffects(
@@ -111,11 +136,14 @@ namespace ReactiveState.Tests
 
 			var curValue = value;
 			await store.Dispatch(new IncrementAction());
-			await store.States().Skip(1).FirstAsync();
-			Assert.AreEqual(curValue+1, value);
+			await store.States()/*.Skip(1)*/.FirstAsync();
+			Assert.AreEqual(curValue + 1, value);
 
 			var res3 = await store.States().Skip(1).FirstAsync();
 			Assert.AreEqual(curValue, value, "Third wait");
+
+			await store.States().Skip(2).FirstAsync();
+			await store.Dispatch(new StopAction());
 		}
 
 		[Test]

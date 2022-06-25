@@ -1,10 +1,10 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace ReactiveState
 {
 
-	public interface IDispatcher
+	public interface IDispatcher<TState>
 	{
-		Task Dispatch(IAction action);
+		Task<TState?> Dispatch(IAction action);
 	}
 }

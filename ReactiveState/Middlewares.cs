@@ -51,7 +51,7 @@ namespace ReactiveState
 			{
 				foreach (var h in hooks)
 					if (!h(context.OriginalState, context.Action))
-						return Task.CompletedTask;
+						return Task.FromResult(context.OriginalState);
 
 				return next(context);
 			});
@@ -63,9 +63,9 @@ namespace ReactiveState
 			{
 				foreach (var h in hooks)
 					if (!await h(context.OriginalState, context.Action))
-						return;
+						return context.OriginalState;
 
-				await next(context);
+				return await next(context);
 			});
 
 		public static MiddlewareBuilder<TState, TContext> UseAfterHook<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder,
@@ -73,10 +73,12 @@ namespace ReactiveState
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(next => async (context) =>
 			{
-				await next(context);
+				var res = await next(context);
 
 				foreach (var h in hooks)
 					h(context.OriginalState, context.NewState, context.Action);
+
+				return res;
 			});
 
 		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder,
@@ -98,11 +100,11 @@ namespace ReactiveState
 			{
 				try
 				{
-					await next(context);
+					return await next(context);
 				}
 				finally
 				{
-					requests.OnNext((context, context.OriginalState, context.Action));
+					requests.OnNext((context, context.NewState, context.Action));
 				}
 			});
 		}
@@ -120,10 +122,10 @@ namespace ReactiveState
 		{
 			return dispatcherBuilder.Use(next => async (context) =>
 			{
-
+				TState? res;
 				try
 				{
-					await next(context);
+					res = await next(context);
 				}
 				finally
 				{
@@ -138,8 +140,10 @@ namespace ReactiveState
 					}
 
 					foreach (var a in newActions)
-						await context.Dispatcher.Dispatch(a);
+						res = await context.Dispatcher.Dispatch(a);
 				}
+
+				return res;
 			});
 		}
 
@@ -148,9 +152,10 @@ namespace ReactiveState
 			=> dispatcherBuilder.Use(
 				next => async (context) =>
 				{
+					TState? res;
 					try
 					{
-						await next(context);
+						res = await next(context);
 					}
 					finally
 					{
@@ -165,8 +170,9 @@ namespace ReactiveState
 						}
 
 						foreach (var a in actions)
-							await context.Dispatcher.Dispatch(a);
+							res = await context.Dispatcher.Dispatch(a);
 					}
+					return res;
 				}
 			);
 		/*

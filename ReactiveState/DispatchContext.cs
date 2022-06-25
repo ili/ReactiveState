@@ -6,7 +6,7 @@ namespace ReactiveState
 {
 	public class DispatchContext<TState> : IDispatchContext<TState>
 	{
-		public DispatchContext(IAction action, TState originalState, IStateEmitter<TState> stateEmitter, IDispatcher dispatcher)
+		public DispatchContext(IAction action, TState originalState, IStateEmitter<TState> stateEmitter, IDispatcher<TState> dispatcher)
 		{
 			Action = action;
 			OriginalState = originalState;
@@ -22,6 +22,6 @@ namespace ReactiveState
 
 		public IStateEmitter<TState> StateEmitter { get; }
 
-		public IDispatcher Dispatcher { get; }
+		public IDispatcher<TState> Dispatcher { get; }
 	}
 }

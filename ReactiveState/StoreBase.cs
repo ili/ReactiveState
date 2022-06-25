@@ -7,13 +7,12 @@ using System.Threading.Tasks;
 
 namespace ReactiveState
 {
-	public abstract class StoreBase<TState, TContext> : IStore<TState>, IStateEmitter<TState>, IDispatcher
+	public abstract class StoreBase<TState, TContext> : IStore<TState>, IStateEmitter<TState>, IDispatcher<TState>
 		where TContext : IDispatchContext<TState>
 	{
 		protected readonly BehaviorSubject<TState> _states;
 		private readonly Middleware<TState, TContext> _dispatcher;
 		private readonly ContextFactory<TState, TContext> _contextFactory;
-		private readonly ConcurrentQueue<IAction> _dispatchActions = new ConcurrentQueue<IAction>();
 
 		public StoreBase(TState initialState, ContextFactory<TState, TContext> contextFactory, Middleware<TState, TContext> dispatcher)
 		{
@@ -22,24 +21,13 @@ namespace ReactiveState
 			_states = new BehaviorSubject<TState>(initialState);
 		}
 
-		volatile int _counter = 0;
-		public async Task Dispatch(IAction action)
+		public async Task<TState?> Dispatch(IAction action)
 		{
 			if (action == null)
 				throw new ArgumentNullException(nameof(action));
 
-			_dispatchActions.Enqueue(action);
-			if (Interlocked.Increment(ref _counter) == 1)
-			{
-				while (_dispatchActions.TryDequeue(out var a))
-				{
-					var context = _contextFactory(a, _states.Value, this, this);
-					await _dispatcher.Dispatch(context);
-
-					if (Interlocked.Decrement(ref _counter) == 0)
-						break;
-				}
-			}
+			var context = _contextFactory(action, _states.Value, this, this);
+			return await _dispatcher.Dispatch(context);
 		}
 
 

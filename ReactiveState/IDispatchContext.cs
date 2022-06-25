@@ -14,6 +14,6 @@ namespace ReactiveState
 
 		IStateEmitter<TState> StateEmitter { get; }
 
-		IDispatcher Dispatcher { get; }
+		IDispatcher<TState> Dispatcher { get; }
 	}
 }

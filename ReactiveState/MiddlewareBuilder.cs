@@ -21,7 +21,7 @@ namespace ReactiveState
 
 		public Middleware<TState, TContext> Build()
 		{
-			Dispatcher<TState, TContext> pipe = context => Task.CompletedTask;
+			Dispatcher<TState, TContext> pipe = context => Task.FromResult(context.OriginalState);
 
 			// for (var i = 0; i < _middlewares.Count; i++)
 			for (var i = _middlewares.Count-1; i >= 0; i--)
@@ -50,11 +50,11 @@ namespace ReactiveState
 		/// <param name="action"></param>
 		public static MiddlewareBuilder<TState, TContext> Use<TState, TContext>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, Action<IAction> action)
 			where TContext : IDispatchContext<TState>
-			=> dispatcherBuilder.Use(a => { action(a.Action); return Task.CompletedTask; });
+			=> dispatcherBuilder.Use(a => { action(a.Action); return Task.FromResult(a.OriginalState); });
 
 		public static MiddlewareBuilder<TState, TContext> Use<TState, TContext>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, Action<TContext> action)
 			where TContext : IDispatchContext<TState>
-			=> dispatcherBuilder.Use(a => { action(a); return Task.CompletedTask; });
+			=> dispatcherBuilder.Use(a => { action(a); return Task.FromResult(a.OriginalState); });
 
 	}
 
