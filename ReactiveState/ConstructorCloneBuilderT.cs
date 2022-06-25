@@ -65,7 +65,7 @@ namespace ReactiveState
 			Expression def = Expression.Default(parameterType);
 			if (parameterType.IsArray)
 			{
-				var elementType = parameterType.GetElementType();
+				var elementType = parameterType.GetElementType()!;
 				def = Expression.NewArrayInit(elementType!);
 			}
 
