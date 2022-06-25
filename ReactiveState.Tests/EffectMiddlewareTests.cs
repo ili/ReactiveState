@@ -20,14 +20,14 @@ namespace ReactiveState.Tests
 		public async Task Test1()
 		{
 			var autoResetEvent = new AutoResetEvent(false);
-			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect =
+			Func<IObservable<DispatchContext<int>>, IObservable<(DispatchContext<int>, IAction)>> effect =
 				x => x
-					.Where(_ => _.Item3 is IncrementAction)
+					.Where(_ => _.Action is IncrementAction)
 					.Do(_ => WriteLine("Effect: increment"))
 					.Delay(TimeSpan.FromMilliseconds(100))
 					.Do(_ => WriteLine("Effect: delayed"))
 					//.Do(_ => autoResetEvent.WaitOne())
-					.Select(_ => (_.Item1, (IAction)new DecrementAction()))
+					.Select(_ => (_, (IAction)new DecrementAction()))
 					.Do(_ => WriteLine("Effect: decrement"))
 					.Do(_ => autoResetEvent.Set())
 					;
@@ -64,18 +64,18 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task Test2()
 		{
-			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect1 =
+			Func<IObservable<DispatchContext<int>>, IObservable<(DispatchContext<int>, IAction)>> effect1 =
 				x => x
-					.Where(_ => _.Item3 is IncrementAction)
+					.Where(_ => _.Action is IncrementAction)
 					.Take(1)
-					.RepeatWhen(_ => _.Select(n => x.Select(i => i.Item3 is StopAction).Where(_ => _)).Switch())
+					.RepeatWhen(_ => _.Select(n => x.Select(i => i.Action is StopAction).Where(_ => _)).Switch())
 					.Do(_ => Debug.WriteLine("Begin DEcrement"))
 					//.RetryWhen(_ => x.Select(i => i.Item3 is StopAction).Where(_ => _))
 					.SelectMany(_ => 
 						Observable.Interval(TimeSpan.FromMilliseconds(100))
 							.Do(_ => Debug.WriteLine("	On DEcrement Timer"))
-							.TakeUntil(x.Select(i => i.Item3 is StopAction).Where(_ => _).Take(1).Do(_ => Debug.WriteLine("Stop DEcrement")))
-							.Select(t => _.Item1))
+							.TakeUntil(x.Select(i => i.Action is StopAction).Where(_ => _).Take(1).Do(_ => Debug.WriteLine("Stop DEcrement")))
+							.Select(t => _))
 					//.Switch()
 					.Select(_ =>
 					{
@@ -84,16 +84,16 @@ namespace ReactiveState.Tests
 					})
 					;
 
-			Func<IObservable<(DispatchContext<int>, int, IAction)>, IObservable<(DispatchContext<int>, IAction)>> effect2 =
+			Func<IObservable<DispatchContext<int>>, IObservable<(DispatchContext<int>, IAction)>> effect2 =
 				x => x
-					.Where(_ => _.Item3 is DecrementAction)
+					.Where(_ => _.Action is DecrementAction)
 					.Take(1)
-					.RepeatWhen(_ => _.Select(n => x.Select(i => i.Item3 is StopAction).Where(_ => _)).Switch())
+					.RepeatWhen(_ => _.Select(n => x.Select(i => i.Action is StopAction).Where(_ => _)).Switch())
 					.Do(_ => Debug.WriteLine("Begin INcrement"))
 					.SelectMany(_ => Observable.Interval(TimeSpan.FromMilliseconds(100))
 							.Do(_ => Debug.WriteLine("	On INcrement Timer"))
-							.TakeUntil(x.Select(i => i.Item3 is StopAction).Where(_ => _).Do(_ => Debug.WriteLine("Stop INcrement")))
-							.Select(t => _.Item1))
+							.TakeUntil(x.Select(i => i.Action is StopAction).Where(_ => _).Do(_ => Debug.WriteLine("Stop INcrement")))
+							.Select(t => _))
 					//.Switch()
 					.Select(_ =>
 					{
@@ -262,8 +262,8 @@ namespace ReactiveState.Tests
 		public async Task DoubleEffectAsync()
 		{
 			var effectCounter = 0;
-			Func<DispatchContext<int>, int, IAction, Task<IAction>> effect =
-				async (s, st, a) =>
+			Func<int, IAction, Task<IAction?>> effect =
+				async (st, a) =>
 				{
 					await Task.Delay(50);
 					if (a is IncrementAction)

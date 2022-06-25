@@ -10,10 +10,30 @@ namespace ReactiveState.Tests
 	public class StateEffectTests
 	{
 		[Test]
-		public Task FuncEffectTest()
+		public async Task FuncEffectTest()
 		{
-			Assert.Fail();
-			return Task.CompletedTask;
+			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
+				.UseStateEffects((ctx) =>
+				{
+					if (ctx.NewState > 1)
+						return Task.FromResult<IAction?>(new DecrementAction());
+
+					return Task.FromResult<IAction?>(null);
+				})
+				.UseReducers(
+					(s, a) => a is IncrementAction ? s + 1 : s,
+					(s, a) => a is DecrementAction ? s - 1 : s
+				)
+				.UseNotification();
+
+			var store = new Store<int>(0, builder.Build());
+
+			var res1 = await store.Dispatch(new IncrementAction());
+			Assert.AreEqual(1, res1);
+
+			var res2 = await store.Dispatch(new IncrementAction());
+			Assert.AreEqual(1, res2);
+
 		}
 	}
 }

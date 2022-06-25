@@ -11,7 +11,7 @@ namespace ReactiveState
 	{
 		private readonly List<Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>>> _middlewares = new List<Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>>>();
 
-		public CompositeDisposable Free { get; } = new CompositeDisposable();
+		public CompositeDisposable DisposeWith { get; } = new CompositeDisposable();
 
 		public MiddlewareBuilder<TState, TContext> Use(params Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>>[] middlewares)
 		{
@@ -21,13 +21,13 @@ namespace ReactiveState
 
 		public Middleware<TState, TContext> Build()
 		{
-			Dispatcher<TState, TContext> pipe = context => Task.FromResult(context.OriginalState);
+			Dispatcher<TState, TContext> pipe = context => Task.FromResult(context.NewState ?? context.OriginalState);
 
 			// for (var i = 0; i < _middlewares.Count; i++)
 			for (var i = _middlewares.Count-1; i >= 0; i--)
 				pipe = _middlewares[i](pipe);
 
-			return  new Middleware<TState, TContext>(pipe, Free);
+			return  new Middleware<TState, TContext>(pipe, DisposeWith);
 		}
 
 	}

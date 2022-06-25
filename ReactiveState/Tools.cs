@@ -188,14 +188,16 @@ namespace ReactiveState
 		public static IEnumerable<Func<IObservable<(TState, IAction)>, IObservable<IAction>>> ObservableEffects<TState>(this Type type)
 			=> ReadonlyStaticFields<Func<IObservable<(TState, IAction)>, IObservable<IAction>>>(type);
 
-		public static IEnumerable<Func<TStoreContext, TState, IAction, Task<IAction>>> Effects<TStoreContext, TState>(this Type type)
+		public static IEnumerable<Func<TContext, Task<IAction?>>> Effects<TContext, TState>(this Type type)
+			where TContext : IDispatchContext<TState>
 			=> type.ReadonlyStaticFields()
-			.Where (_ => _.FieldType.LikeEffect<TStoreContext, TState>())
+			.Where (_ => _.FieldType.LikeEffect<TContext, TState>())
 			.Select(_ => _.GetValue(null)!)
-			.Select(_ => EffectWrapper<TStoreContext, TState>(_))
+			.Select(_ => EffectWrapper<TContext, TState>(_))
 			;
 
 		public static bool LikeEffect<TContext, TState>(this Type type)
+			where TContext : IDispatchContext<TState>
 		{
 			var looksLikeEffect = 
 				type.Like<Func<TContext, object, IAction, IAction>>()       ||
@@ -214,6 +216,8 @@ namespace ReactiveState
 
 			return false;
 		}
+		public static IEnumerable<Func<IDispatchContext<TState>, TState, Task<IAction>>> StateEffects<TState>(this Type type)
+			=> StateEffects<IDispatchContext<TState>, TState>(type);
 
 		public static IEnumerable<Func<TStoreContext, TState, Task<IAction>>> StateEffects<TStoreContext, TState>(this Type type)
 			=> type.ReadonlyStaticFields()
@@ -271,7 +275,8 @@ namespace ReactiveState
 			return false;
 		}
 
-		public static IEnumerable<Func<TContext, TState, IAction, Task<IAction>>> Effects<TContext, TState>(this Assembly assembly)
+		public static IEnumerable<Func<TContext, Task<IAction?>>> Effects<TContext, TState>(this Assembly assembly)
+			where TContext : IDispatchContext<TState>
 			=> assembly.GetTypes().SelectMany(x => x.Effects<TContext, TState>());
 
 		public static IEnumerable<Func<TContext, TState, Task<IAction>>> StateEffects<TContext, TState>(this Assembly assembly)
@@ -281,56 +286,90 @@ namespace ReactiveState
 			=> assembly.GetTypes().SelectMany(x => x.ObservableStateEffects<TContext, TState>());
 
 
-		public static Func<TContext, TState, IAction, Task<IAction>> Wrap<TContext, TState, TAction, TResult>(this Func<TState, TAction, TResult> func)
+		public static Func<TContext, Task<IAction?>> Wrap<TContext, TState, TAction, TResult>(this Func<TState, TAction, TResult> func)
+			where TContext : IDispatchContext<TState>
+			where TAction : IAction
 			=> EffectWrapper<TContext, TState>(func);
 
-		public static Func<TContext, TState, IAction, Task<IAction>> Wrap<TContext, TState, TAction, TResult>(this Func<TContext, TState, TAction, TResult> func)
+
+		public static Func<TContext, Task<IAction?>> Wrap<TContext, TState, TAction, TResult>(this Func<TContext, TState?, TAction, TResult?> func)
+			where TContext : IDispatchContext<TState>
+			where TAction : IAction
 			=> EffectWrapper<TContext, TState>(func);
 
-		public static Func<TContext, TState, IAction, Task<IAction>> EffectWrapper<TContext, TState>(object func)
+		public static Func<TContext, Task<IAction?>> EffectWrapper<TContext, TState>(object func)
+			where TContext : IDispatchContext<TState>
 		{
 			var type = func.GetType();
 
-			if (type == typeof(Func<TContext, TState, IAction, Task<IAction>>))
-				return (Func<TContext, TState, IAction, Task<IAction>>)func;
-
-			var funcGenericArguments = type.GetGenericArguments();
-
-			if (funcGenericArguments.Length < 3 || funcGenericArguments.Length > 4)
-				throw new InvalidOperationException($"Unexpected func type: {type.Name}");
-
-			var funcReturnType  = funcGenericArguments.Last();
-			var funcActionType  = funcGenericArguments[funcGenericArguments.Length - 2];
-			var funcStateType   = funcGenericArguments.Length == 4 ? funcGenericArguments[1] : funcGenericArguments[0];
-			var funcContextType = funcGenericArguments.Length == 4 ? funcGenericArguments[0] : null;
+			if (type == typeof(Func<TContext, Task<IAction>>))
+				return (Func<TContext, Task<IAction?>>)func;
 
 			var wrapperContextParam = Expression.Parameter(typeof(TContext), "context");
-			var wrapperStateParam   = Expression.Parameter(typeof(TState),   "state");
-			var wrapperActionParam  = Expression.Parameter(typeof(IAction),  "action");
 
-			var invokeActionParam = funcActionType == typeof(IAction)
-				? (Expression)wrapperActionParam
-				: Expression.Convert(wrapperActionParam, funcActionType);
-
-			var invokeStateParam = funcStateType == typeof(TState)
-				? (Expression)wrapperStateParam
-				: funcStateType.IsAssignableFrom(typeof(TState))
-					? Expression.Convert(wrapperStateParam, funcStateType)
-					: null;
-
-			if (!funcStateType.IsAssignableFrom(typeof(TState)))
-				throw new InvalidOperationException("Unconvinient function type");
-
-			var invokeContextParam = funcContextType == typeof(TContext) || funcContextType == null
-				? (Expression)wrapperContextParam
-				: Expression.Convert(wrapperContextParam, funcContextType);
-
+			var funcGenericArguments = type.GetGenericArguments();
 			var funcExpression = Expression.Constant(func);
+			var currentAction = Expression.Property(wrapperContextParam, nameof(IDispatchContext<TState>.Action));
 
-			Expression invokeExpression = funcContextType == null
-				? Expression.Invoke(funcExpression,                     invokeStateParam!, invokeActionParam)
-				: Expression.Invoke(funcExpression, invokeContextParam, invokeStateParam!, invokeActionParam);
+			var invokeParams = new List<Expression>();
 
+			for (var i = 0; i < funcGenericArguments.Length - 1; i++)
+			{
+				var invokeParamType = funcGenericArguments[i];
+				Expression? invokeParam = null;
+
+				if (invokeParamType.Like<IAction>())
+				{
+					invokeParam = Expression.Condition(Expression.TypeIs(currentAction, invokeParamType),
+						Expression.Convert(currentAction, invokeParamType),
+						Expression.Constant(null, invokeParamType)
+						);
+				}
+				else if (invokeParamType.Like<TContext>())
+				{
+					invokeParam = wrapperContextParam;
+				}
+				else if (invokeParamType.Like<TState>())
+				{
+					invokeParam = Expression.Property(wrapperContextParam, nameof(IDispatchContext<TState>.OriginalState));
+				}
+				else if (invokeParamType.GetCustomAttribute<SubStateAttribute>() != null)
+				{
+					if (!typeof(TState).Like<IState>())
+						throw new InvalidOperationException($"{typeof(TState).FullName} should be derived from {typeof(IState).FullName} to access substate");
+
+					var subState = invokeParamType.GetCustomAttribute<SubStateAttribute>()!;
+					string? key = subState.Key;
+					if (string.IsNullOrEmpty(key))
+						key = invokeParamType.FullName;
+
+					invokeParam = Expression.Call(Expression.Property(wrapperContextParam, nameof(IDispatchContext<TState>.OriginalState)),
+						nameof(IState.Get),
+						new[] { typeof(string), invokeParamType },
+						Expression.Constant(key!)
+						);
+				}
+				else if(typeof(TContext).Like<IServiceProvider>())
+				{
+					invokeParam = Expression.Call(Expression.Convert(wrapperContextParam, typeof(IServiceProvider)),
+						nameof(IServiceProvider.GetService),
+						null,
+						Expression.Constant(invokeParamType)
+						);
+				}
+
+				if (invokeParam == null)
+					throw new InvalidOperationException($"Unable to wrap effect parameter for type {invokeParamType.FullName}");
+
+				if (invokeParam.Type != invokeParamType)
+					invokeParam = Expression.Convert(invokeParam, invokeParamType);
+
+				invokeParams.Add(invokeParam);
+			};
+
+			Expression invokeExpression = Expression.Invoke(funcExpression, invokeParams);
+
+			var funcReturnType  = funcGenericArguments.Last();
 			if (funcReturnType.Like(typeof(Task<IAction>)))
 			{
 				var actionType = funcReturnType.GetGenericArguments()[0];
@@ -354,17 +393,26 @@ namespace ReactiveState
 			}
 
 			var mi = new object().GetType().GetMethod(nameof(object.GetType))!;
+			var iActionTypes = funcGenericArguments.Reverse().Skip(1)
+				.Where(_ => _.Like<IAction>())
+				.ToList();
 
-			var iifExpression = Expression.Condition(
-				Expression.Equal(Expression.Call(wrapperActionParam, mi), Expression.Constant(funcActionType)),
+			Expression testExpression = iActionTypes.Count > 0
+				? Expression.TypeIs(currentAction, iActionTypes[0])
+				: Expression.Constant(true);
+
+			for (var i = 1; i < iActionTypes.Count; i++)
+				testExpression = Expression.OrElse(testExpression, Expression.TypeIs(currentAction, iActionTypes[i]));
+
+			var iifExpression = Expression.Condition(testExpression,
 				invokeExpression,
 				Expression.Constant(Task. FromResult<IAction?>(null), typeof(Task<IAction>)));
 
-			var body = funcActionType == typeof(IAction)
+			var body = iActionTypes.Count == 0
 				? invokeExpression
 				: iifExpression;
 
-			var wrapper = Expression.Lambda<Func<TContext, TState, IAction, Task<IAction>>>(body, wrapperContextParam, wrapperStateParam, wrapperActionParam);
+			var wrapper = Expression.Lambda<Func<TContext, Task<IAction?>>>(body, wrapperContextParam);
 
 			return wrapper.Compile();
 		}
@@ -570,7 +618,13 @@ namespace ReactiveState
 				var targetGenericParematers = targetType.GenericTypeArguments;
 				var patternGenericParameters = patternType.GenericTypeArguments;
 
-				if (!targetType.GetGenericTypeDefinition().Like(patternType.GetGenericTypeDefinition()))
+				if (patternType.IsInterface)
+				{
+					var isAny = targetType.GetInterfaces().Any(x => x.Like(patternType));
+					if (!isAny && !targetType.GetGenericTypeDefinition().Like(patternType.GetGenericTypeDefinition()))
+						return false;
+				}
+				else if (!targetType.GetGenericTypeDefinition().Like(patternType.GetGenericTypeDefinition()))
 					return false;
 
 				if (targetGenericParematers.Length != patternGenericParameters.Length)

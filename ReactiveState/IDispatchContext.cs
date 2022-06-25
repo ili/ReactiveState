@@ -10,10 +10,15 @@ namespace ReactiveState
 
 		TState? OriginalState { get; }
 
-		TState? NewState { get; set; }
+		TState? NewState { get; }
 
 		IStateEmitter<TState> StateEmitter { get; }
 
 		IDispatcher<TState> Dispatcher { get; }
+	}
+
+	public interface IMutableStateContext<TState>: IDispatchContext<TState>
+	{
+		void SetState(TState? state);
 	}
 }

@@ -9,9 +9,6 @@ namespace ReactiveState
 
 		public TState? State { get; }
 
-		public static readonly Reducer<TState?, SetStateAction<TState>> Reducer = (st, a) =>
-			{
-				return a.State;
-			};
+		public static readonly Reducer<TState?, SetStateAction<TState>> Reducer = (st, a) =>  a.State;
 	}
 }

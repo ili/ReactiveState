@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 
 namespace ReactiveState.Tests
 {
+	using Ctx = DispatchContext<int>;
+
 	public class ToolsTests
 	{
 		private static readonly int Value = 101;
@@ -15,39 +17,39 @@ namespace ReactiveState.Tests
 		private static int NonReadOnlyValue;
 #pragma warning restore CS0169
 
-		private static readonly Reducer<int, IAction> SomeReducer = (a, b) => ++a;
+		private static readonly Reducer<int,  IAction> SomeReducer = (a, b) => ++a;
 		private static readonly Reducer<long, IAction> LongReducer1 = (a, b) => ++a;
 		private static readonly Reducer<long, MyAction> LongReducer2 = (a, b) => 100;
 
-		private static readonly Func<       int, IAction, IAction>          Effect01 = (a, b)    => null;
-		private static readonly Func<       int, IAction, Task<IAction>>    Effect02 = (a, b)    => Task.FromResult<IAction>(null);
-		private static readonly Func<Store, int, IAction, IAction>          Effect03 = (a, b, c) => null;
-		private static readonly Func<Store, int, IAction, Task<IAction>>    Effect04 = (a, b, c) => Task.FromResult<IAction>(null);
+		private static readonly Func<     int, IAction, IAction?>          Effect01 = (a, b)    => null;
+		private static readonly Func<     int, IAction, Task<IAction?>>    Effect02 = (a, b)    => Task.FromResult<IAction?>(null);
+		private static readonly Func<Ctx, int, IAction, IAction?>          Effect03 = (a, b, c) => null;
+		private static readonly Func<Ctx, int, IAction, Task<IAction?>>    Effect04 = (a, b, c) => Task.FromResult<IAction?>(null);
 
-		private static readonly Func<       int, MyAction, IAction>         Effect05 = (a, b)    => null;
-		private static readonly Func<       int, MyAction, Task<IAction>>   Effect06 = (a, b)    => Task.FromResult<IAction>(null);
-		private static readonly Func<Store, int, MyAction, IAction>         Effect07 = (a, b, c) => null;
-		private static readonly Func<Store, int, MyAction, Task<IAction>>   Effect08 = (a, b, c) => Task.FromResult<IAction>(null);
+		private static readonly Func<     int, MyAction, IAction?>         Effect05 = (a, b)    => null;
+		private static readonly Func<     int, MyAction, Task<IAction?>>   Effect06 = (a, b)    => Task.FromResult<IAction?>(null);
+		private static readonly Func<Ctx, int, MyAction, IAction?>         Effect07 = (a, b, c) => null;
+		private static readonly Func<Ctx, int, MyAction, Task<IAction?>>   Effect08 = (a, b, c) => Task.FromResult<IAction?>(null);
 
-		private static readonly Func<       int, IAction, MyAction>         Effect09 = (a, b)    => null;
-		private static readonly Func<       int, IAction, Task<MyAction>>   Effect10 = (a, b)    => Task.FromResult<MyAction>(null);
-		private static readonly Func<Store, int, IAction, MyAction>         Effect11 = (a, b, c) => null;
-		private static readonly Func<Store, int, IAction, Task<MyAction>>   Effect12 = (a, b, c) => Task.FromResult<MyAction>(null);
+		private static readonly Func<     int, IAction, MyAction?>         Effect09 = (a, b)    => null;
+		private static readonly Func<     int, IAction, Task<MyAction?>>   Effect10 = (a, b)    => Task.FromResult<MyAction?>(null);
+		private static readonly Func<Ctx, int, IAction, MyAction?>         Effect11 = (a, b, c) => null;
+		private static readonly Func<Ctx, int, IAction, Task<MyAction?>>   Effect12 = (a, b, c) => Task.FromResult<MyAction?>(null);
 
-		private static readonly Func<       int, MyAction, MyAction>        Effect13 = (a, b)    => null;
-		private static readonly Func<       int, MyAction, Task<MyAction>>  Effect14 = (a, b)    => Task.FromResult<MyAction>(null);
-		private static readonly Func<Store, int, MyAction, MyAction>        Effect15 = (a, b, c) => null;
-		private static readonly Func<Store, int, MyAction, Task<MyAction>>  Effect16 = (a, b, c) => Task.FromResult<MyAction>(null);
+		private static readonly Func<     int, MyAction, MyAction?>        Effect13 = (a, b)    => null;
+		private static readonly Func<     int, MyAction, Task<MyAction?>>  Effect14 = (a, b)    => Task.FromResult<MyAction?>(null);
+		private static readonly Func<Ctx, int, MyAction, MyAction?>        Effect15 = (a, b, c) => null;
+		private static readonly Func<Ctx, int, MyAction, Task<MyAction?>>  Effect16 = (a, b, c) => Task.FromResult<MyAction?>(null);
 
-		private static readonly Func<       int,  IAction>          StateEffect01 = (b)    => null;
-		private static readonly Func<       int,  Task<IAction>>    StateEffect02 = (b)    => Task.FromResult<IAction>(null);
-		private static readonly Func<Store, int,  IAction>          StateEffect03 = (a, b) => null;
-		private static readonly Func<Store, int,  Task<IAction>>    StateEffect04 = (a, b) => Task.FromResult<IAction>(null);
+		private static readonly Func<     int,  IAction?>          StateEffect01 = (b)    => null;
+		private static readonly Func<     int,  Task<IAction?>>    StateEffect02 = (b)    => Task.FromResult<IAction?>(null);
+		private static readonly Func<Ctx, int,  IAction?>          StateEffect03 = (a, b) => null;
+		private static readonly Func<Ctx, int,  Task<IAction?>>    StateEffect04 = (a, b) => Task.FromResult<IAction?>(null);
 
-		private static readonly Func<       int, MyAction>          StateEffect05 = (b)    => null;
-		private static readonly Func<       int, Task<MyAction>>    StateEffect06 = (b)    => Task.FromResult<MyAction>(null);
-		private static readonly Func<Store, int, MyAction>          StateEffect07 = (a, b) => null;
-		private static readonly Func<Store, int, Task<MyAction>>    StateEffect08 = (a, b) => Task.FromResult<MyAction>(null);
+		private static readonly Func<     int, MyAction?>          StateEffect05 = (b)    => null;
+		private static readonly Func<     int, Task<MyAction?>>    StateEffect06 = (b)    => Task.FromResult<MyAction?>(null);
+		private static readonly Func<Ctx, int, MyAction?>          StateEffect07 = (a, b) => null;
+		private static readonly Func<Ctx, int, Task<MyAction?>>    StateEffect08 = (a, b) => Task.FromResult<MyAction?>(null);
 
 		private static readonly Func<       IObservable<int>, IObservable<IAction>>    ObservableStateEffect01 = (b)    => Observable.Return<IAction>(null);
 		private static readonly Func<Store, IObservable<int>, IObservable<IAction>>    ObservableStateEffect02 = (a, b) => Observable.Return<IAction>(null);
@@ -121,6 +123,11 @@ namespace ReactiveState.Tests
 		private class MarkerOfString: IMarker<string>
 		{ }
 
+		private interface IDispatchContext2<T> : IDispatchContext<T>
+		{
+
+		}
+
 		[Test]
 		public void LikeTest()
 		{
@@ -130,13 +137,14 @@ namespace ReactiveState.Tests
 			AssertLike(typeof(SampleAction), typeof(IAction));
 			AssertLike(typeof(string),       typeof(object));
 
-			AssertLike(typeof(Action<string>),      typeof(Action<object>));
-			AssertLike(typeof(Action<ActionBase>),  typeof(Action<IAction>));
-			AssertLike(typeof(IMarker<ActionBase>), typeof(IMarker<IAction>));
-			AssertLike(typeof(IMarker<ActionBase>), typeof(IMarker));
-			AssertLike(typeof(MarkerOfString),      typeof(IMarker));
-			AssertLike(typeof(MarkerOfString),      typeof(IMarker<object>));
-
+			AssertLike(typeof(Action<string>),         typeof(Action<object>));
+			AssertLike(typeof(Action<ActionBase>),     typeof(Action<IAction>));
+			AssertLike(typeof(IMarker<ActionBase>),    typeof(IMarker<IAction>));
+			AssertLike(typeof(IMarker<ActionBase>),    typeof(IMarker));
+			AssertLike(typeof(MarkerOfString),         typeof(IMarker));
+			AssertLike(typeof(MarkerOfString),         typeof(IMarker<object>));
+			AssertLike(typeof(DispatchContext<int>),   typeof(IDispatchContext<int>));
+			AssertLike(typeof(IDispatchContext2<int>), typeof(IDispatchContext<int>));
 
 			AssertLike(typeof(Reducer<object, SampleAction>), typeof(Reducer<object, IAction>));
 
@@ -168,67 +176,75 @@ namespace ReactiveState.Tests
 			var store = new Store(0, builder.Build());
 
 			{
-				Func<IStoreContext, int, MyAction, Task<IAction>> func = (a, b, c) => Task.FromResult((IAction)new MyAction());
+				Func<IDispatchContext<int>, int, MyAction, Task<IAction>> func = (a, b, c) => Task.FromResult((IAction)new MyAction());
 				var wrapped = func.Wrap();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 
 			{
-				Func<IStoreContext, int, MyAction, Task<MyAction>> func = (a, b, c) => Task.FromResult(new MyAction());
+				Func<IDispatchContext<int>, int, MyAction, Task<MyAction>> func = (a, b, c) => Task.FromResult(new MyAction());
 				var wrapped = func.Wrap();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 
 			{
 				Func<int, MyAction, Task<IAction>> func = (b, c) => Task.FromResult((IAction)new MyAction());
-				var wrapped = func.Wrap<Store, int, MyAction, Task<IAction>>();
+				var wrapped = func.Wrap<DispatchContext<int>, int, MyAction, Task<IAction>>();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 
 			{
 				Func<int, MyAction, Task<MyAction>> func = (b, c) => Task.FromResult(new MyAction());
-				var wrapped = func.Wrap<Store, int, MyAction, Task<MyAction>>();
+				var wrapped = func.Wrap<IDispatchContext<int>, int, MyAction, Task<MyAction>>();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 
 			{
-				Func<IStoreContext, int, MyAction, IAction> func = (a, b, c) => new MyAction();
+				Func<IDispatchContext<int>, int, MyAction, IAction> func = (a, b, c) => new MyAction();
 				var wrapped = func.Wrap();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 
 			{
-				Func<IStoreContext, int, MyAction, MyAction> func = (a, b, c) => new MyAction();
+				Func<IDispatchContext<int>, int, MyAction, MyAction> func = (a, b, c) => new MyAction();
 				var wrapped = func.Wrap();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 
 			{
 				Func<int, MyAction, IAction> func = (b, c) => new MyAction();
-				var wrapped = func.Wrap<Store, int, MyAction, IAction>();
+				var wrapped = func.Wrap<IDispatchContext<int>, int, MyAction, IAction>();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 
 			{
 				Func<int, MyAction, MyAction> func = (b, c) => new MyAction();
-				var wrapped = func.Wrap<Store, int, MyAction, MyAction>();
+				var wrapped = func.Wrap<IDispatchContext<int>, int, MyAction, MyAction>();
 
-				Assert.IsInstanceOf<MyAction>(await wrapped(store, 0, new MyAction()));
-				Assert.IsNull                (await wrapped(store, 0, new SampleAction()));
+				Assert.IsInstanceOf<MyAction>(await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsNull                (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
+			}
+
+			{
+				Func<int, MyAction, SampleAction, IAction> func = (b, c, d) => (IAction)c ?? d;
+				var wrapped = Tools.EffectWrapper<IDispatchContext<int>, int>(func);
+
+				Assert.IsInstanceOf<MyAction>     (await wrapped(new DispatchContext<int>(new MyAction(),     0, store, store)));
+				Assert.IsInstanceOf<SampleAction> (await wrapped(new DispatchContext<int>(new SampleAction(), 0, store, store)));
 			}
 		}
 
@@ -240,7 +256,7 @@ namespace ReactiveState.Tests
 			var expected = Enumerable.Range(1, 16).Select(_ => $"Effect{_:00}").ToArray();
 
 			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeEffect<Store, int>())
+				.Where(_ => _.FieldType.LikeEffect<IDispatchContext<int>, int>())
 				.Select(_ => _.Name)
 				.OrderBy(_ => _)
 				.ToArray();
@@ -255,8 +271,8 @@ namespace ReactiveState.Tests
 		{
 			var type = GetType();
 
-			Assert.AreEqual(16, type.Effects<Store,  int>().Count());
-			Assert.AreEqual(0,  type.Effects<Store, long>().Count());
+			Assert.AreEqual(16, type.Effects<IDispatchContext<int>,   int>().Count());
+			Assert.AreEqual(0,  type.Effects<IDispatchContext<long>, long>().Count());
 		}
 
 		class ComplexState
@@ -287,15 +303,15 @@ namespace ReactiveState.Tests
 		[Test]
 		public void LikeEffectTest2()
 		{
-			Assert.True (typeof(Func<                     ComplexState,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
-			Assert.True (typeof(Func<                     ComplexState, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
-			Assert.True (typeof(Func<Store<ComplexState>, ComplexState,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
-			Assert.True (typeof(Func<Store<ComplexState>, ComplexState, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<                               ComplexState,  IAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<                               ComplexState, MyAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<DispatchContext<ComplexState>, ComplexState,  IAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<DispatchContext<ComplexState>, ComplexState, MyAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
 
-			Assert.False(typeof(Func<                     int,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
-			Assert.False(typeof(Func<                     int, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>());
-			Assert.False(typeof(Func<Store<ComplexState>, int,  IAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
-			Assert.False(typeof(Func<Store<ComplexState>, int, MyAction, MyAction>).LikeEffect<Store<ComplexState>, ComplexState>());
+			Assert.False(typeof(Func<                               int,  IAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.False(typeof(Func<                               int, MyAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.False(typeof(Func<DispatchContext<ComplexState>, int,  IAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.False(typeof(Func<DispatchContext<ComplexState>, int, MyAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
 
 			//Assert.True (typeof(Func<                     int,  IAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
 			//Assert.True (typeof(Func<                     int, MyAction,  IAction>).LikeEffect<Store<ComplexState>, ComplexState>(stateTree));
@@ -366,7 +382,7 @@ namespace ReactiveState.Tests
 			var expected = Enumerable.Range(1, 8).Select(_ => $"StateEffect{_:00}").ToArray();
 
 			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeStateEffect<Store, int>())
+				.Where(_ => _.FieldType.LikeStateEffect<Ctx, int>())
 				.Select(_ => _.Name)
 				.OrderBy(_ => _)
 				.ToArray();
@@ -381,8 +397,8 @@ namespace ReactiveState.Tests
 		{
 			var type = GetType();
 
-			Assert.AreEqual(8, type.StateEffects<Store,  int>().Count());
-			Assert.AreEqual(0, type.StateEffects<Store, long>().Count());
+			Assert.AreEqual(8, type.StateEffects< int>().Count());
+			Assert.AreEqual(0, type.StateEffects<long>().Count());
 		}
 
 		[Test]
