@@ -3,6 +3,7 @@ using ReactiveState.ComplexState;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 
@@ -450,11 +451,27 @@ namespace ReactiveState.Tests
 		public class SubSate1Action : ActionBase { }
 		public class SubSate23Action : ActionBase { }
 
+		public class SubState4 : ActionBase
+		{
+			public SubState4(IAction? p1, IAction? p2, IAction a1, IAction a2)
+			{
+				P1 = p1;
+				P2 = p2;
+				A1 = a1;
+				A2 = a2;
+			}
+
+			public IAction? P1 { get; }
+			public IAction? P2 { get; }
+			public IAction A1 { get; }
+			public IAction A2 { get; }
+		}
+
 		[Test]
 		public void BuildComplexReducerTest()
 		{
 			var reducer = Tools.BuildComplexReducer(
-				(Reducer<IAction, IAction>)((IAction? p, IAction a) => a),
+				(Expression<Reducer<IAction, IAction>>)((IAction? p, IAction a) => new SubState4(p, p, a, a)),
 				(Reducer<SubState1, SubSate1Action>)((SubState1? p, SubSate1Action a) => new SubState1()),
 				(Reducer<SubState2, SubSate23Action>)((SubState2? p, SubSate23Action a) => new SubState2()),
 				(Reducer<SubState3, SubSate23Action>)((SubState3? p, SubSate23Action a) => new SubState3())
@@ -469,7 +486,7 @@ namespace ReactiveState.Tests
 			Assert.NotNull(res1.Get<SubState1>());
 			Assert.Null(res1.Get<SubState2>());
 			Assert.Null(res1.Get<SubState3>());
-			Assert.That(res1.Get<IAction>() is SubSate1Action);
+			Assert.That(res1.Get<IAction>() is SubState4);
 
 			var res2 = reducer(res1, new SubSate23Action())!;
 			Assert.NotNull(res2);
@@ -477,7 +494,7 @@ namespace ReactiveState.Tests
 			Assert.NotNull(res2.Get<SubState1>());
 			Assert.NotNull(res2.Get<SubState2>());
 			Assert.NotNull(res2.Get<SubState3>());
-			Assert.That(res2.Get<IAction>() is SubSate23Action);
+			Assert.That(res2.Get<IAction>() is SubState4);
 
 		}
 	}

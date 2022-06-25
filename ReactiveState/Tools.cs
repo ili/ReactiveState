@@ -63,6 +63,20 @@ namespace ReactiveState
 			return wrapper.Compile();
 		}
 
+		private class ReducerParameterRewriter : ExpressionVisitor
+		{
+			private IReadOnlyDictionary<ParameterExpression, Expression> _rewriter;
+
+			public ReducerParameterRewriter(IReadOnlyDictionary<ParameterExpression, Expression> rewriter)
+			{
+				_rewriter = rewriter;
+			}
+
+			protected override Expression VisitParameter(ParameterExpression node)
+				=> _rewriter[node];
+
+		}
+
 		public static Reducer<IState, IAction> BuildComplexReducer(params object[] reducers)
 		{
 			var stateParam = Expression.Parameter(typeof(IState), "state");
@@ -77,11 +91,16 @@ namespace ReactiveState
 			//	Expression.Call(actionParam, typeof(object).GetMethod(nameof(object.GetType))!));
 
 			var reducerDescriptors = reducers.Select(_ => _)
-				.Select(_ => new
-				{
-					StateType = _.GetType().GetGenericArguments()[0],
-					ActionType = _.GetType().GetGenericArguments()[1],
-					Method = _
+				.Select(_ => {
+					var expression = _ as LambdaExpression;
+
+					return new
+					{
+						StateType = expression?.Parameters[0]?.Type ?? _.GetType().GetGenericArguments()[0],
+						ActionType = expression?.Parameters[1]?.Type ?? _.GetType().GetGenericArguments()[1],
+						Method = _,
+						Expression = expression
+					};
 				})
 				.GroupBy(_ => _.ActionType)
 				.Select(_ => new
@@ -112,29 +131,54 @@ namespace ReactiveState
 
 				var calls = r.Reducers.Select(rd =>
 				{
-					var key = Expression.Constant(rd.StateType.FullName);
+					ConstantExpression key = Expression.Constant(rd.StateType.FullName);
+					var subState = rd.StateType.GetCustomAttribute<SubStateAttribute>();
+					if (subState != null && !string.IsNullOrEmpty(subState.Key))
+						key = Expression.Constant(subState.Key);
+
 					var getMethodInfo = typeof(IPersistentState)
 						.GetMethod(nameof(IPersistentState.Get))!
 						.MakeGenericMethod(rd.StateType);
 
-					var getValue = Expression.Call(mutableState,
+					Expression getValue = Expression.Call(mutableState,
 						getMethodInfo,
-						//nameof(IMutableState.Get),
-						//new[] { rd.StateType },
 						key);
 
-					var invokeReducer = Expression.Invoke(Expression.Constant(rd.Method),
-						getValue,
-						typedAction
-						);
+					if (rd.Expression == null)
+					{
+						var invokeReducer = Expression.Invoke(Expression.Constant(rd.Method),
+								getValue,
+								typedAction
+							);
 
-					var invokeSetter = Expression.Call(mutableState,
-						nameof(IMutableState.Set),
-						new[] { rd.StateType },
-						key,
-						invokeReducer);
+						Expression invokeSetter = Expression.Call(mutableState,
+							nameof(IMutableState.Set),
+							new[] { rd.StateType },
+							key,
+							invokeReducer);
 
-					return invokeSetter;
+						return invokeSetter;
+					}
+					else
+					{
+						var st = Expression.Parameter(getValue.Type, key.Value!.ToString()!.Replace(".", "$")!.Replace("+", "$"));
+						var assignParamener = Expression.Assign(st, getValue);
+
+						var convertedBody =	new ReducerParameterRewriter(new Dictionary<ParameterExpression, Expression>
+							{
+								{ rd.Expression.Parameters[0], st },
+								{ rd.Expression.Parameters[1], actionParam }
+							})
+							.Visit(rd.Expression.Body);
+
+						return Expression.Block(new[] {st}, assignParamener,
+								Expression.Call(mutableState,
+								nameof(IMutableState.Set),
+								new[] { rd.StateType },
+								key,
+								convertedBody));							
+
+					}
 				})
 				.ToList();
 
@@ -148,30 +192,14 @@ namespace ReactiveState
 			var commitExpression = Expression.Call(mutableState,
 				typeof(IMutableState).GetMethod(nameof(IMutableState.Commit))!);
 
-			//var returnTarget = Expression.Label(typeof(IState));
-			//var returnExpression = Expression.Return(returnTarget,
-			//	commitExpression,
-			//	typeof(IState));
-
-			//var returnLabel = Expression.Label(returnTarget, Expression.Constant(null, typeof(IState)));
-
-			//invocations.Add(assignActualActionType);
 			invocations.Add(assignMutableState);
 
 			invocations.AddRange(ifInvocations);
 
 			invocations.Add(commitExpression);
-			//invocations.Add(returnExpression);
-			//invocations.Add(returnLabel);
 			parameters.Add(mutableState);
-			//parameters.Add(actualActionType);
 
-			var body = Expression.Block(/*new ParameterExpression[]
-				{
-					mutableState,
-					actualActionType
-				},*/
-				parameters,
+			var body = Expression.Block(parameters,
 				invocations
 			);
 
