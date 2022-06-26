@@ -1,4 +1,5 @@
 using ReactiveState.ComplexState;
+using ReactiveState.ComplexState.StateTree;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -76,6 +77,70 @@ namespace ReactiveState
 				=> _rewriter[node];
 
 		}
+
+		public static Reducer<TState, IAction> ReducerWrapper<TState>(object arg, IStateTree<TState>? stateTree)
+		{
+			var type = arg.GetType();
+
+			if (type == typeof(Reducer<TState, IAction>))
+				return (Reducer<TState, IAction>)arg;
+
+			var actualStateType = type.GetGenericArguments()[0];
+			var actionType = type.GetGenericArguments()[1];
+
+			if (typeof(TState) != actualStateType && stateTree == null)
+				throw new ArgumentNullException(nameof(stateTree));
+
+
+			Expression reducerExpression = Expression.Constant(arg);
+
+			var state = Expression.Parameter(typeof(TState), "state");
+			var action = Expression.Parameter(typeof(IAction), "action");
+
+			if (typeof(TState) != actualStateType)
+			{
+				var actionParametrer = Expression.Parameter(actionType);
+				var stateParameter = Expression.Parameter(typeof(TState));
+
+				var getterExpression = Expression.Invoke(
+					stateTree!.FindGetter(actualStateType)!,
+					stateParameter);
+				if (getterExpression == null)
+					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {actualStateType.FullName} type");
+
+				var composer = stateTree.FindComposer(actualStateType)!;
+
+				reducerExpression = Expression.Lambda(
+					Expression.Invoke(composer,
+						stateParameter,
+						Expression.Invoke(reducerExpression,
+							getterExpression,
+							actionParametrer)),
+					stateParameter,
+					actionParametrer);
+			}
+
+			var mi = new object().GetType().GetMethod(nameof(object.GetType))!;
+			var isAssignableFrom = typeof(Type).GetMethod(nameof(Type.IsAssignableFrom))!;
+			var isAssignableFromExpression =
+				Expression.Call(
+					Expression.Constant(actionType),
+					isAssignableFrom,
+					Expression.Call(action, mi)
+					);
+
+
+			var ifExpression = Expression.Condition(
+				isAssignableFromExpression,
+				Expression.Invoke(reducerExpression, state, Expression.Convert(action, actionType)),
+				state);
+
+
+			var wrapper = Expression.Lambda<Reducer<TState, IAction>>(ifExpression, state, action);
+
+			return wrapper.Compile();
+		}
+
 
 		public static Reducer<IState, IAction> BuildComplexReducer(params object[] reducers)
 		{
