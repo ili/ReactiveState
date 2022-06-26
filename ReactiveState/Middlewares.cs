@@ -147,33 +147,5 @@ namespace ReactiveState
 				return res;
 			});
 		}
-
-		public static MiddlewareBuilder<TState, TContext> UseStateEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> builder, params Func<TContext, Task<IAction?>>[] effects)
-			where TContext : IDispatchContext<TState>
-			=> builder.Use(
-				next => async (context) =>
-				{
-					TState? res;
-					try
-					{
-						res = await next(context);
-					}
-					finally
-					{
-						var actions = new List<IAction>();
-
-						foreach (var e in effects)
-						{
-							var newAction = await e(context);
-							if (newAction != null)
-								actions.Add(newAction);
-						}
-
-						foreach (var a in actions)
-							res = await context.Dispatcher.Dispatch(a);
-					}
-					return res;
-				}
-			);
 	}
 }

@@ -13,7 +13,7 @@ namespace ReactiveState.Tests
 		public async Task FuncEffectTest()
 		{
 			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
-				.UseStateEffects((ctx) =>
+				.UseEffects((ctx) =>
 				{
 					if (ctx.NewState > 1)
 						return Task.FromResult<IAction?>(new DecrementAction());
