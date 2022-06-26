@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,7 @@ namespace ReactiveState.ComplexState
 #endif
 		}
 
+		
 		public State() : this(Enumerable.Empty<KeyValuePair<string, object?>>()) { }
 
 		public IMutableState BeginTransaction()
@@ -36,5 +38,29 @@ namespace ReactiveState.ComplexState
 			=> _values.GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+		public static IEnumerable<KeyValuePair<string, object?>> ToKvp(IEnumerable<object> values)
+			=> values.Select(x => new KeyValuePair<string, object?>(StateExtensions.Key(x.GetType()), x));
+
+		public static IEnumerable<KeyValuePair<string, object?>> ToNulls(IEnumerable<string> values)
+			=> values.Select(x => new KeyValuePair<string, object?>(x, null));
+		public static IEnumerable<KeyValuePair<string, object?>> ToNulls(IEnumerable<Type> values)
+			=> values.Select(x => new KeyValuePair<string, object?>(StateExtensions.Key(x), null));
+
+		public static IPersistentState Build(params object[] values)
+		{
+			return new State(ToKvp(values));
+		}
+
+		public static IPersistentState Build(IEnumerable<string> nulls, params object[] values)
+		{
+			return new State(ToNulls(nulls).Concat(ToKvp(values)));
+		}
+
+		public static IPersistentState Build(IEnumerable<Type> nulls, params object[] values)
+		{
+			return new State(ToNulls(nulls).Concat(ToKvp(values)));
+		}
+
 	}
 }

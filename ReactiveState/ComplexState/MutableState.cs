@@ -46,5 +46,14 @@ namespace ReactiveState.ComplexState
 			=> GetResult().GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+		public IMutableState Merge(IPersistentState state)
+		{
+			if (!ReferenceEquals(state, this))
+				foreach (var p in state)
+					Set(p.Key, p.Value);
+
+			return this;
+		}
 	}
 }

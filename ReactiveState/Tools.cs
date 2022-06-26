@@ -13,29 +13,34 @@ namespace ReactiveState
 {
 	public static class Tools
 	{
-		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Assembly assembly)
+		public static IEnumerable<Reducer<TState?, IAction>> Reducers<TState>(this Assembly assembly)
 			=> assembly.GetTypes().SelectMany(_ => _.Reducers<TState>());
 
-		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Type type)
+		public static IEnumerable<Reducer<TState?, IAction>> Reducers<TState>(this Type type)
 			=> ReadonlyStaticFields(type)
 			.Where(fi => fi.FieldType.LikeReducer<TState>())
 			.Select(_ => _.GetValue(null)!)
 			.Select(_ => ReducerWrapper<TState>(_));
 
-		public static bool LikeReducer<T>(this Type type) => type.Like<Reducer<T, IAction>>();
+		public static bool LikeReducer<T>(this Type type) => type.Like<Reducer<T, IAction>>()
+			;
 
-		public static bool LikeReducer(this Type type) => type.LikeReducer<object>();
+		public static bool LikeReducer(this Type type) => type.LikeReducer<object>()
+			|| type.Like<Expression<Reducer<object, IAction>>>()
+			|| type.Like<Reducer<IPersistentState, IAction>>()
+			|| type.Like<Expression<Reducer<IPersistentState, IAction>>>()
+			;
 
-		public static Reducer<TState, IAction> Wrap<TState, TAction>(this Reducer<TState, TAction> reducer)
+		public static Reducer<TState?, IAction> Wrap<TState, TAction>(this Reducer<TState, TAction> reducer)
 			where TAction: IAction
 			=> ReducerWrapper<TState>(reducer);
 
-		public static Reducer<TState, IAction> ReducerWrapper<TState>(object reducer)
+		public static Reducer<TState?, IAction> ReducerWrapper<TState>(object reducer)
 		{
 			var type = reducer.GetType();
 
 			if (type == typeof(Reducer<TState, IAction>))
-				return (Reducer<TState, IAction>)reducer;
+				return (Reducer<TState?, IAction>)reducer;
 
 			var actualStateType = type.GetGenericArguments()[0];
 			var actionType = type.GetGenericArguments()[1];
@@ -59,7 +64,7 @@ namespace ReactiveState
 				Expression.Invoke(reducerExpression, state, Expression.Convert(action, actionType)),
 				state);
 
-			var wrapper = Expression.Lambda<Reducer<TState, IAction>>(ifExpression, state, action);
+			var wrapper = Expression.Lambda<Reducer<TState?, IAction>>(ifExpression, state, action);
 
 			return wrapper.Compile();
 		}
@@ -78,7 +83,7 @@ namespace ReactiveState
 
 		}
 
-		public static Reducer<TState, IAction> ReducerWrapper<TState>(object arg, IStateTree<TState>? stateTree)
+		static Reducer<TState, IAction> ReducerWrapper<TState>(object arg, IStateTree<TState>? stateTree)
 		{
 			var type = arg.GetType();
 
@@ -209,6 +214,9 @@ namespace ReactiveState
 						getMethodInfo,
 						key);
 
+					if (rd.StateType.Like<IPersistentState>())
+						getValue = mutableState;
+
 					if (rd.Expression == null)
 					{
 						var invokeReducer = Expression.Invoke(Expression.Constant(rd.Method),
@@ -221,6 +229,12 @@ namespace ReactiveState
 							new[] { rd.StateType },
 							key,
 							invokeReducer);
+
+						if (rd.StateType.Like<IPersistentState>())
+							invokeSetter = Expression.Call(mutableState,
+								nameof(IMutableState.Merge),
+								null,
+								invokeReducer);
 
 						return invokeSetter;
 					}

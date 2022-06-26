@@ -55,7 +55,6 @@ namespace ReactiveState
 		public static MiddlewareBuilder<TState, TContext> Use<TState, TContext>(this MiddlewareBuilder<TState, TContext> dispatcherBuilder, Action<TContext> action)
 			where TContext : IDispatchContext<TState>
 			=> dispatcherBuilder.Use(a => { action(a); return Task.FromResult(a.OriginalState); });
-
 	}
 
 }

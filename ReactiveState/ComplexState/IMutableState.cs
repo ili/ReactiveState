@@ -4,6 +4,8 @@ namespace ReactiveState.ComplexState
 	{
 		IMutableState Set<T>(string key, T? value) where T : class;
 
+		IMutableState Merge(IPersistentState state);
+
 		IState Commit();
 	}
 }
