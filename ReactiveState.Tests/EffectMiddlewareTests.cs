@@ -314,23 +314,31 @@ namespace ReactiveState.Tests
 
 			var store = new Store<int>(0, builder.Build());
 
-			Assert.Throws<InvalidOperationException>(() => effect(1, null));
+			Assert.Throws<InvalidOperationException>(() => effect(1, new IncrementAction()));
 
-			Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Dispatch(new IncrementAction()));
+			Assert.ThrowsAsync<InvalidOperationException>(() => store.Dispatch(new IncrementAction()));
 		}
 
 		[Test]
-		public void ExceptionTestAsync()
+		public async Task ExceptionTestAsync()
 		{
 			Func<int, IAction, Task<IAction?>> effect =
 				async (st, a) =>
 				{
 					await Task.Delay(500);
 					throw new InvalidOperationException();
+
+				};
+			Func<int, IAction, Task<IAction?>> effect2 =
+				async (st, a) =>
+				{
+					await Task.Delay(500);
+					throw new ArgumentNullException();
+
 				};
 
 			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
-				.UseEffects(effect)
+				.UseEffects(effect, effect2)
 				.UseReducers(
 					(s, a) => a is IncrementAction ? s + 1 : s,
 					(s, a) => a is DecrementAction ? s - 1 : s
@@ -340,9 +348,13 @@ namespace ReactiveState.Tests
 			var store = new Store<int>(0, builder.Build());
 
 
-			//Assert.Throws<InvalidOperationException>(() => effect(1, null));
+			// Aggregate exception expected...
+			// but not!
+			// 
+			Assert.ThrowsAsync<InvalidOperationException>(() => effect(1, new IncrementAction()));
 
-			Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Dispatch(new IncrementAction()));
+			Assert.ThrowsAsync<InvalidOperationException>(() => store.Dispatch(new IncrementAction()));
+
 		}
 	}
 }

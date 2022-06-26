@@ -4,6 +4,7 @@ using System.Reactive.Linq;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace ReactiveState
 {
@@ -122,6 +123,21 @@ namespace ReactiveState
 		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> builder, params Func<TContext, Task<IAction?>>[] effects)
 			where TContext : IDispatchContext<TState>
 		{
+
+			var ctx = Expression.Parameter(typeof(TContext), "ctx");
+
+			var eff = Expression.Convert(Expression.NewArrayInit(typeof(Task<IAction?>),
+				effects.Select(e => Expression.Invoke(Expression.Constant(e), ctx))),
+				typeof(IEnumerable<Task<IAction>>))
+				;
+
+			var body = Expression.Call(typeof(Task), nameof(Task.WhenAll), new[] { typeof(IAction) },
+				eff);
+
+			var lambda = Expression.Lambda<Func<TContext, Task<IAction[]>>>(body, ctx);
+
+			var invoker = lambda.Compile();
+
 			return builder.Use(next => async (context) =>
 			{
 				TState? res;
@@ -131,17 +147,20 @@ namespace ReactiveState
 				}
 				finally
 				{
-					var newActions = new List<IAction>();
 
-					foreach (var e in effects)
-					{
-						var newAction = await e(context);
-						if (newAction != null)
-							newActions.Add(newAction);
-					}
+					var newActions = await invoker(context);
 
-					foreach (var a in newActions)
-						res = await context.Dispatcher.Dispatch(a);
+					//var newActions = new List<IAction>();
+
+					//foreach (var e in effects)
+					//{
+					//	var newAction = await e(context);
+					//	if (newAction != null)
+					//		newActions.Add(newAction);
+					//}
+
+					foreach (var a in newActions.Where(_ => _ != null))
+						res = await context.Dispatcher.Dispatch(a!);
 				}
 
 				return res;
