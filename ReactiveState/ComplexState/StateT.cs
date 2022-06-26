@@ -6,7 +6,7 @@ using System.Text;
 
 namespace ReactiveState.ComplexState
 {
-	public abstract class State<TRoot> : IState
+	abstract class State<TRoot> : IState
 	{
 		static IStateTree<TRoot>? _stateTree;
 		public static void Init(IStateTree<TRoot> stateTree)
