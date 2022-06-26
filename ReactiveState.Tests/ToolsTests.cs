@@ -304,10 +304,12 @@ namespace ReactiveState.Tests
 		[Test]
 		public void LikeEffectTest2()
 		{
-			Assert.True (typeof(Func<                               ComplexState,  IAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
-			Assert.True (typeof(Func<                               ComplexState, MyAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
-			Assert.True (typeof(Func<DispatchContext<ComplexState>, ComplexState,  IAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
-			Assert.True (typeof(Func<DispatchContext<ComplexState>, ComplexState, MyAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<                                ComplexState,  IAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<                                ComplexState, MyAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<DispatchContext<ComplexState>,  ComplexState,  IAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<DispatchContext<ComplexState>,  ComplexState, MyAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<IDispatchContext<ComplexState>, ComplexState,  IAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
+			Assert.True (typeof(Func<IDispatchContext<ComplexState>, ComplexState, MyAction, MyAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
 
 			Assert.False(typeof(Func<                               int,  IAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
 			Assert.False(typeof(Func<                               int, MyAction,  IAction>).LikeEffect<IDispatchContext<ComplexState>, ComplexState>());
@@ -375,31 +377,14 @@ namespace ReactiveState.Tests
 #pragma warning restore CS0184, CS0183
 		}
 
-		[Test]
-		public void LikeStateEffectTest()
-		{
-			var type = GetType();
-
-			var expected = Enumerable.Range(1, 8).Select(_ => $"StateEffect{_:00}").ToArray();
-
-			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeStateEffect<Ctx, int>())
-				.Select(_ => _.Name)
-				.OrderBy(_ => _)
-				.ToArray();
-
-			Assert.AreEqual(
-				string.Join(", ", expected),
-				string.Join(", ", fields));
-		}
 
 		[Test]
 		public void StateEffectsTest()
 		{
 			var type = GetType();
 
-			Assert.AreEqual(8, type.StateEffects< int>().Count());
-			Assert.AreEqual(0, type.StateEffects<long>().Count());
+			Assert.AreEqual(16, type.Effects< int>().Count());
+			Assert.AreEqual(0,  type.Effects<long>().Count());
 		}
 
 		[Test]

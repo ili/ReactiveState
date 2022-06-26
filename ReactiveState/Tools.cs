@@ -280,6 +280,8 @@ namespace ReactiveState
 
 		public static IEnumerable<Func<IObservable<(TState, IAction)>, IObservable<IAction>>> ObservableEffects<TState>(this Type type)
 			=> ReadonlyStaticFields<Func<IObservable<(TState, IAction)>, IObservable<IAction>>>(type);
+		public static IEnumerable<Func<IDispatchContext<TState>, Task<IAction?>>> Effects<TState>(this Type type)
+			=> Effects<IDispatchContext<TState>, TState>(type);
 
 		public static IEnumerable<Func<TContext, Task<IAction?>>> Effects<TContext, TState>(this Type type)
 			where TContext : IDispatchContext<TState>
@@ -309,15 +311,6 @@ namespace ReactiveState
 
 			return false;
 		}
-		public static IEnumerable<Func<IDispatchContext<TState>, TState, Task<IAction>>> StateEffects<TState>(this Type type)
-			=> StateEffects<IDispatchContext<TState>, TState>(type);
-
-		public static IEnumerable<Func<TStoreContext, TState, Task<IAction>>> StateEffects<TStoreContext, TState>(this Type type)
-			=> type.ReadonlyStaticFields()
-			.Where (_ => _.FieldType.LikeStateEffect<TStoreContext, TState>())
-			.Select(_ => _.GetValue(null)!)
-			.Select(_ => StateEffectWrapper<TStoreContext, TState>(_))
-			;
 
 		public static IEnumerable<Func<TStoreContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TStoreContext, TState>(this Type type)
 			=> type.ReadonlyStaticFields()
@@ -325,27 +318,6 @@ namespace ReactiveState
 			.Select(_ => _.GetValue(null)!)
 			.Select(_ => ObservableStateEffectWrapper<TStoreContext, TState>(_))
 			;
-
-		public static bool LikeStateEffect<TContext, TState>(this Type type)
-		{
-			var looksLikeEffect =
-				type.Like<Func<TContext, object, IAction>>()       ||
-				type.Like<Func<TContext, object, Task<IAction>>>() ||
-				type.Like<Func<          object, IAction>>()       ||
-				type.Like<Func<          object, Task<IAction>>>()
-				;
-
-			if (looksLikeEffect == false)
-				return false;
-
-			var funcGenericArguments = type.GetGenericArguments();
-			var actualStateType = funcGenericArguments.Length == 3 ? funcGenericArguments[1] : funcGenericArguments[0];
-
-			if (actualStateType == typeof(TState))
-				return true;
-
-			return false;
-		}
 
 		public static bool LikeObservableStateEffect<TContext, TState>(this Type type)
 		{
@@ -367,13 +339,12 @@ namespace ReactiveState
 
 			return false;
 		}
+		public static IEnumerable<Func<IDispatchContext<TState>, Task<IAction?>>> Effects<TState>(this Assembly assembly)
+			=> Effects<IDispatchContext<TState>, TState>(assembly);
 
 		public static IEnumerable<Func<TContext, Task<IAction?>>> Effects<TContext, TState>(this Assembly assembly)
 			where TContext : IDispatchContext<TState>
 			=> assembly.GetTypes().SelectMany(x => x.Effects<TContext, TState>());
-
-		public static IEnumerable<Func<TContext, TState, Task<IAction>>> StateEffects<TContext, TState>(this Assembly assembly)
-			=> assembly.GetTypes().SelectMany(x => x.StateEffects<TContext, TState>());
 
 		public static IEnumerable<Func<TContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TContext, TState>(this Assembly assembly)
 			=> assembly.GetTypes().SelectMany(x => x.ObservableStateEffects<TContext, TState>());
