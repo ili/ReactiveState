@@ -26,13 +26,13 @@ namespace ReactiveState.Tests
 			public int Sum;
 		}
 
-
 		private static readonly Reducer<SubState1, IncrementAction> SubState1OnIncrement = (x, a) => new SubState1() { Counter = x?.Counter ?? 0 + 1 };
 		private static readonly Expression<Reducer<SubState2, IncrementAction>> SubState2OnIncrement = (x, a) => new SubState2() { Counter = (x != null ? x.Counter : 0) + 1 };
 		private static readonly Reducer<IPersistentState, IncrementAction> IStateOnIncrement = (x, a) => State.Build(new SubState3()
 		{
-			Sum = (x.Get<SubState1>()?.Counter ?? 0) + (x.Get<SubState2>()?.Counter ?? 0)
+			Sum = (x?.Get<SubState1>()?.Counter ?? 0) + (x?.Get<SubState2>()?.Counter ?? 0)
 		});
+		private static readonly Expression<Reducer<IPersistentState, IAction>> LastAction = (x, a) => State.Build(a);
 
 		[Test]
 		public async Task ReducerTest()
@@ -46,7 +46,9 @@ namespace ReactiveState.Tests
 				.Build()
 				);
 
-			var st = await store.Dispatch(new IncrementAction());
+			var a = new IncrementAction();
+
+			var st = await store.Dispatch(a);
 
 			Assert.NotNull(st!.Get<SubState1>());
 			Assert.NotNull(st!.Get<SubState2>());
@@ -54,6 +56,7 @@ namespace ReactiveState.Tests
 			Assert.AreEqual(1, st.Get<SubState1>()!.Counter);
 			Assert.AreEqual(1, st.Get<SubState2>()!.Counter);
 			Assert.AreEqual(2, st.Get<SubState3>()!.Sum);
+			Assert.AreEqual(a, st.Get<IAction>());
 		}
 	}
 }

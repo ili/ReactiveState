@@ -62,5 +62,31 @@ namespace ReactiveState.ComplexState
 			return new State(ToNulls(nulls).Concat(ToKvp(values)));
 		}
 
+		public static IPersistentState Build(params KeyValuePair<string, object?>[] values)
+			=> new State(values);
+
+		public static IPersistentState Build(params KeyValuePair<Type, object?>[] values)
+			=> new State(values.Select(_ => new KeyValuePair<string, object?>(StateExtensions.Key(_.Key), _.Value)));
+
+		public static IPersistentState Build<T>(T? value)
+			=> Build(new KeyValuePair<Type, object?>(typeof(T), value));
+
+		public static IPersistentState Build<T1, T2>(T1? value1, T2? value2)
+			=> Build(new KeyValuePair<Type, object?>(typeof(T1), value1),
+				new KeyValuePair<Type, object?>(typeof(T2), value2)
+				);
+
+		public static IPersistentState Build<T1, T2, T3>(T1? value1, T2? value2, T3? value3)
+			=> Build(new KeyValuePair<Type, object?>(typeof(T1), value1),
+				new KeyValuePair<Type, object?>(typeof(T2), value2),
+				new KeyValuePair<Type, object?>(typeof(T3), value3)
+				);
+
+		public static IPersistentState Build<T1, T2, T3, T4>(T1? value1, T2? value2, T3? value3, T4? value4)
+			=> Build(new KeyValuePair<Type, object?>(typeof(T1), value1),
+				new KeyValuePair<Type, object?>(typeof(T2), value2),
+				new KeyValuePair<Type, object?>(typeof(T3), value3),
+				new KeyValuePair<Type, object?>(typeof(T4), value4)
+				);
 	}
 }

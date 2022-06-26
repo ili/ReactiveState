@@ -251,11 +251,16 @@ namespace ReactiveState
 							.Visit(rd.Expression.Body);
 
 						return Expression.Block(new[] {st}, assignParamener,
-								Expression.Call(mutableState,
-								nameof(IMutableState.Set),
-								new[] { rd.StateType },
-								key,
-								convertedBody));							
+							rd.StateType.Like<IPersistentState>()
+								? Expression.Call(mutableState,
+									nameof(IMutableState.Merge),
+									null,
+									convertedBody)
+								: Expression.Call(mutableState,
+									nameof(IMutableState.Set),
+									new[] { rd.StateType },
+									key,
+									convertedBody));							
 
 					}
 				})
