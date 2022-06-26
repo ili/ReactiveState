@@ -275,11 +275,7 @@ namespace ReactiveState
 			return reducerExpression.Compile();
 		}
 
-		public static IEnumerable<Func<IObservable<(TState, IAction)>, IObservable<IAction>>> ObservableEffects<TState>(this Assembly assembly)
-			=> ReadonlyStaticFields<Func<IObservable<(TState, IAction)>, IObservable<IAction>>>(assembly);
 
-		public static IEnumerable<Func<IObservable<(TState, IAction)>, IObservable<IAction>>> ObservableEffects<TState>(this Type type)
-			=> ReadonlyStaticFields<Func<IObservable<(TState, IAction)>, IObservable<IAction>>>(type);
 		public static IEnumerable<Func<IDispatchContext<TState>, Task<IAction?>>> Effects<TState>(this Type type)
 			=> Effects<IDispatchContext<TState>, TState>(type);
 
@@ -312,14 +308,14 @@ namespace ReactiveState
 			return false;
 		}
 
-		public static IEnumerable<Func<TStoreContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TStoreContext, TState>(this Type type)
+		public static IEnumerable<Func<TStoreContext, IObservable<TState>, IObservable<IAction>>> ObservableEffects<TStoreContext, TState>(this Type type)
 			=> type.ReadonlyStaticFields()
-			.Where (_ => _.FieldType.LikeObservableStateEffect<TStoreContext, TState>())
+			.Where (_ => _.FieldType.LikeObservableEffect<TStoreContext, TState>())
 			.Select(_ => _.GetValue(null)!)
-			.Select(_ => ObservableStateEffectWrapper<TStoreContext, TState>(_))
+			.Select(_ => ObservableEffectWrapper<TStoreContext, TState>(_))
 			;
 
-		public static bool LikeObservableStateEffect<TContext, TState>(this Type type)
+		public static bool LikeObservableEffect<TContext, TState>(this Type type)
 		{
 			var looksLikeEffect =
 				type.Like<Func<TContext, IObservable<object>, IObservable<IAction>>>() ||
@@ -346,8 +342,8 @@ namespace ReactiveState
 			where TContext : IDispatchContext<TState>
 			=> assembly.GetTypes().SelectMany(x => x.Effects<TContext, TState>());
 
-		public static IEnumerable<Func<TContext, IObservable<TState>, IObservable<IAction>>> ObservableStateEffects<TContext, TState>(this Assembly assembly)
-			=> assembly.GetTypes().SelectMany(x => x.ObservableStateEffects<TContext, TState>());
+		public static IEnumerable<Func<TContext, IObservable<TState>, IObservable<IAction>>> ObservableEffects<TContext, TState>(this Assembly assembly)
+			=> assembly.GetTypes().SelectMany(x => x.ObservableEffects<TContext, TState>());
 
 
 		public static Func<TContext, Task<IAction?>> Wrap<TContext, TState, TAction, TResult>(this Func<TState, TAction, TResult> func)
@@ -550,7 +546,7 @@ namespace ReactiveState
 			return wrapper.Compile();
 		}
 
-		public static Func<TContext, IObservable<TState>, IObservable<IAction>> ObservableStateEffectWrapper<TContext, TState>(object func)
+		public static Func<TContext, IObservable<TState>, IObservable<IAction>> ObservableEffectWrapper<TContext, TState>(object func)
 		{
 			var type = func.GetType();
 

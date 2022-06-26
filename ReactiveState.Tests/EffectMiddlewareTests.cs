@@ -228,7 +228,7 @@ namespace ReactiveState.Tests
 		[Test]
 		public async System.Threading.Tasks.Task DoubleEffect()
 		{
-			Func<int, IAction, IAction> effect =
+			Func<int, IAction, IAction?> effect =
 				(st, a) =>
 				{
 					if (a is IncrementAction)
@@ -298,7 +298,7 @@ namespace ReactiveState.Tests
 		[Test]
 		public void ExceptionTest()
 		{
-			Func<int, IAction, IAction> effect =
+			Func<int, IAction, IAction?> effect =
 				(st, a) =>
 				{
 					throw new InvalidOperationException();
@@ -322,7 +322,7 @@ namespace ReactiveState.Tests
 		[Test]
 		public void ExceptionTestAsync()
 		{
-			Func<int, IAction, Task<IAction>> effect =
+			Func<int, IAction, Task<IAction?>> effect =
 				async (st, a) =>
 				{
 					await Task.Delay(500);

@@ -395,7 +395,7 @@ namespace ReactiveState.Tests
 			var expected = Enumerable.Range(1, 2).Select(_ => $"ObservableStateEffect{_:00}").ToArray();
 
 			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeObservableStateEffect<Store, int>())
+				.Where(_ => _.FieldType.LikeObservableEffect<Store, int>())
 				.Select(_ => _.Name)
 				.OrderBy(_ => _)
 				.ToArray();
@@ -410,8 +410,8 @@ namespace ReactiveState.Tests
 		{
 			var type = GetType();
 
-			Assert.AreEqual(2, type.ObservableStateEffects<Store,  int>().Count());
-			Assert.AreEqual(0, type.ObservableStateEffects<Store, long>().Count());
+			Assert.AreEqual(2, type.ObservableEffects<Store,  int>().Count());
+			Assert.AreEqual(0, type.ObservableEffects<Store, long>().Count());
 		}
 
 		[Test]
@@ -423,9 +423,9 @@ namespace ReactiveState.Tests
 			Func<Store<ComplexState>, IObservable<ComplexState>, IObservable<IAction>>  effect3 = (ctx, a) => Observable.Empty<IAction>();
 			Func<Store<ComplexState>, IObservable<int>,          IObservable<MyAction>> effect4 = (ctx, a) => Observable.Empty<MyAction>();
 
-			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect1));
+			Assert.NotNull(Tools.ObservableEffectWrapper<Store<ComplexState>, ComplexState>(effect1));
 			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect2));
-			Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect3));
+			Assert.NotNull(Tools.ObservableEffectWrapper<Store<ComplexState>, ComplexState>(effect3));
 			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect4));
 		}
 
