@@ -25,16 +25,16 @@ namespace ReactiveState.ComplexState
 		public State(IDictionary<string, object> values)
 			=> _values = values;
 
-		public IMutableState BeginTransaction()
+		public virtual IMutableState BeginTransaction()
 		{
-			return new MutableState(this);
+			return new MutableState(this, (s, x) => new State(ApplyChanges(x)));
 		}
 
-		public static State ApplyChanges(State source, IEnumerable<KeyValuePair<string, object?>> changes)
+		protected IDictionary<string, object> ApplyChanges(IEnumerable<KeyValuePair<string, object?>> changes)
 		{
-			var values = new Dictionary<string, object>(source._values);
+			var values = new Dictionary<string, object>(_values);
 
-			foreach(var v in changes)
+			foreach (var v in changes)
 			{
 				if (v.Value == null)
 				{
@@ -45,8 +45,12 @@ namespace ReactiveState.ComplexState
 					values[v.Key] = v.Value!;
 			}
 
+			return values;
+		}
 
-			return new State(values);
+		public static State ApplyChanges(State source, IEnumerable<KeyValuePair<string, object?>> changes)
+		{
+			return new State(source.ApplyChanges(changes));
 		}
 
 		public bool ContainsKey(string key)

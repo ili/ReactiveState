@@ -13,7 +13,7 @@ namespace ReactiveState
 		public static MiddlewareBuilder<TState, TContext> UseReducers<TContext, TState>(
 			this MiddlewareBuilder<TState, TContext> builder,
 			params Reducer<TState?, IAction>[] reducers)
-			where TContext : IMutableStateContext<TState>
+			where TContext : IDispatchContext<TState>
 			=> builder.Use(
 				next => (context) =>
 				{
@@ -83,15 +83,17 @@ namespace ReactiveState
 			});
 
 		public static MiddlewareBuilder<TState, TContext> UseEffects<TContext, TState>(this MiddlewareBuilder<TState, TContext> builder,
-			params Func<IObservable<TContext>, IObservable<(TContext Context, IAction NewAction)>>[] effects)
+			params Func<IObservable<TContext>, IObservable<IAction>>[] effects)
 			where TContext : IDispatchContext<TState>
 		{
 			var requests = new Subject<TContext>();
+			IDispatcher<TState>? dispatcher = null;
+
 			var actions = effects
 					.Select(_ => _(requests))
 					.Merge()
-					.Where(_ => _.NewAction != null)
-					.Subscribe(async _ => await _.Context.Dispatcher.Dispatch(_.NewAction));
+					.Where(_ => _ != null)
+					.Subscribe(async _ => await dispatcher!.Dispatch(_));
 
 			builder.DisposeWith.Add(requests);
 
@@ -99,6 +101,7 @@ namespace ReactiveState
 			{
 				try
 				{
+					dispatcher = context.Dispatcher;
 					return await next(context);
 				}
 				finally

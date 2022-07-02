@@ -12,9 +12,6 @@ namespace ReactiveState
 	//public delegate Func<Dispatcher<TState, TContext>, Dispatcher<TState, TContext>> Middleware<in TContext, TState>(TContext context)
 	//	where TContext : IDispatchContext<TState>;
 
-	public delegate Task<TState?> Dispatcher<TState, TContext>(TContext context)
-		where TContext : IDispatchContext<TState>;
-
-	public delegate TContext ContextFactory<TState, TContext>(IAction action, TState state, IStateEmitter<TState> stateEmitter, IDispatcher<TState> dispatcher)
+	public delegate Task<TState?> Dispatcher<TState, in TContext>(TContext context)
 		where TContext : IDispatchContext<TState>;
 }

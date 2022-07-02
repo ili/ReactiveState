@@ -20,14 +20,14 @@ namespace ReactiveState.Tests
 		public async Task Test1()
 		{
 			var autoResetEvent = new AutoResetEvent(false);
-			Func<IObservable<DispatchContext<int>>, IObservable<(DispatchContext<int>, IAction)>> effect =
+			Func<IObservable<DispatchContext<int>>, IObservable<IAction>> effect =
 				x => x
 					.Where(_ => _.Action is IncrementAction)
 					.Do(_ => WriteLine("Effect: increment"))
 					.Delay(TimeSpan.FromMilliseconds(100))
 					.Do(_ => WriteLine("Effect: delayed"))
 					//.Do(_ => autoResetEvent.WaitOne())
-					.Select(_ => (_, (IAction)new DecrementAction()))
+					.Select(_ => new DecrementAction())
 					.Do(_ => WriteLine("Effect: decrement"))
 					.Do(_ => autoResetEvent.Set())
 					;
@@ -64,14 +64,14 @@ namespace ReactiveState.Tests
 		[Test]
 		public async Task Test2()
 		{
-			Func<IObservable<DispatchContext<int>>, IObservable<(DispatchContext<int>, IAction)>> effect1 =
+			Func<IObservable<DispatchContext<int>>, IObservable<IAction>> effect1 =
 				x => x
 					.Where(_ => _.Action is IncrementAction)
 					.Take(1)
 					.RepeatWhen(_ => _.Select(n => x.Select(i => i.Action is StopAction).Where(_ => _)).Switch())
 					.Do(_ => Debug.WriteLine("Begin DEcrement"))
 					//.RetryWhen(_ => x.Select(i => i.Item3 is StopAction).Where(_ => _))
-					.SelectMany(_ => 
+					.SelectMany(_ =>
 						Observable.Interval(TimeSpan.FromMilliseconds(100))
 							.Do(_ => Debug.WriteLine("	On DEcrement Timer"))
 							.TakeUntil(x.Select(i => i.Action is StopAction).Where(_ => _).Take(1).Do(_ => Debug.WriteLine("Stop DEcrement")))
@@ -80,11 +80,11 @@ namespace ReactiveState.Tests
 					.Select(_ =>
 					{
 						Debug.WriteLine("		Send DecrementAction Effect");
-						return (_, (IAction)new DecrementAction());
+						return new DecrementAction();
 					})
 					;
 
-			Func<IObservable<DispatchContext<int>>, IObservable<(DispatchContext<int>, IAction)>> effect2 =
+			Func<IObservable<DispatchContext<int>>, IObservable<IAction>> effect2 =
 				x => x
 					.Where(_ => _.Action is DecrementAction)
 					.Take(1)
@@ -98,7 +98,7 @@ namespace ReactiveState.Tests
 					.Select(_ =>
 					{
 						Debug.WriteLine("		Send IncrementAction Effect");
-						return (_, (IAction)new IncrementAction());
+						return new IncrementAction();
 					});
 
 			var builder = new MiddlewareBuilder<int, DispatchContext<int>>()
@@ -254,7 +254,7 @@ namespace ReactiveState.Tests
 
 			await store.Dispatch(new IncrementAction());
 
-			Assert.AreEqual( 4, counter);
+			Assert.AreEqual(4, counter);
 			Assert.AreEqual(-1, value);
 		}
 
@@ -354,6 +354,17 @@ namespace ReactiveState.Tests
 			Assert.ThrowsAsync<InvalidOperationException>(() => effect(1, new IncrementAction()));
 
 			Assert.ThrowsAsync<InvalidOperationException>(() => store.Dispatch(new IncrementAction()));
+
+		}
+
+		[Test]
+		public void ObservableEffectWrapperTest()
+		{
+			Func<IObservable<IDispatchContext<int>>, IObservable<IncrementAction>> func = a => Observable.Empty<IncrementAction>();
+
+			//func(Observable.Empty<DispatchContext<int>>());
+
+			var f2 = (Func<IObservable<DispatchContext<int>>, IObservable<IAction>>)func;
 
 		}
 	}

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -5,16 +6,18 @@ using System.Linq;
 
 namespace ReactiveState.ComplexState
 {
-	class MutableState : IMutableState
+	public class MutableState : IMutableState
 	{
-		private readonly State _source;
-		private readonly ConcurrentDictionary<string, object?> _changes = new ConcurrentDictionary<string, object?>();
-		public MutableState(State store)
+		private readonly IState _source;
+		private readonly Func<IState, IDictionary<string, object?>, IState> _commiter;
+		private readonly IDictionary<string, object?> _changes = new Dictionary<string, object?>();
+		public MutableState(IState store, Func<IState, IDictionary<string, object?>, IState> commiter)
 		{
 			_source = store;
+			_commiter = commiter;
 		}
 
-		public IState Commit() => State.ApplyChanges(_source, _changes);
+		public IState Commit() => _commiter(_source, _changes);
 
 		private IEnumerable<KeyValuePair<string, object>> GetResult()
 		{

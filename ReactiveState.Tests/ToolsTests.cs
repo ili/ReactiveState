@@ -52,8 +52,8 @@ namespace ReactiveState.Tests
 		private static readonly Func<Ctx, int, MyAction?> StateEffect07 = (a, b) => null;
 		private static readonly Func<Ctx, int, Task<MyAction?>> StateEffect08 = (a, b) => Task.FromResult<MyAction?>(null);
 
-		private static readonly Func<IObservable<int>, IObservable<IAction>> ObservableStateEffect01 = (b) => Observable.Return<IAction>(null);
-		private static readonly Func<Store, IObservable<int>, IObservable<IAction>> ObservableStateEffect02 = (a, b) => Observable.Return<IAction>(null);
+		private static readonly Func<IObservable<IDispatchContext<int>>, IObservable<IAction?>> ObservableStateEffect01 = (b) => Observable.Return<IAction>(null);
+		private static readonly Func<IObservable<DispatchContext<int>>,  IObservable<IAction?>> ObservableStateEffect02 = (b) => Observable.Return<IAction>(null);
 
 		[Test]
 		public void ReadonlyStaticFieldsTest()
@@ -395,7 +395,7 @@ namespace ReactiveState.Tests
 			var expected = Enumerable.Range(1, 2).Select(_ => $"ObservableStateEffect{_:00}").ToArray();
 
 			var fields = type.ReadonlyStaticFields()
-				.Where(_ => _.FieldType.LikeObservableEffect<Store, int>())
+				.Where(_ => _.FieldType.LikeObservableEffect<IDispatchContext<int>, int>())
 				.Select(_ => _.Name)
 				.OrderBy(_ => _)
 				.ToArray();
@@ -410,23 +410,33 @@ namespace ReactiveState.Tests
 		{
 			var type = GetType();
 
-			Assert.AreEqual(2, type.ObservableEffects<Store, int>().Count());
-			Assert.AreEqual(0, type.ObservableEffects<Store, long>().Count());
+			Assert.AreEqual(2, type.ObservableEffects<IDispatchContext<int>, int>().Count());
+			Assert.AreEqual(0, type.ObservableEffects<IDispatchContext<long>, long>().Count());
 		}
 
 		[Test]
 		public void ObservableStateEffectWrapperTest()
 		{
-			Func<IObservable<ComplexState>, IObservable<IAction>> effect1 = (a) => Observable.Empty<IAction>();
-			Func<IObservable<int>, IObservable<MyAction>> effect2 = (a) => Observable.Empty<MyAction>();
+			Func<IObservable<DispatchContext<ComplexState>>, IObservable<IAction>> effect1 = (a) => Observable.Empty<IAction>();
+			Func<IObservable<IDispatchContext<int>>,         IObservable<MyAction>> effect2 = (a) => Observable.Empty<MyAction>();
+			Func<IObservable<IDispatchContext<int>>,         IObservable<IAction>> effect3 = (a) => Observable.Empty<MyAction>();
 
-			Func<Store<ComplexState>, IObservable<ComplexState>, IObservable<IAction>> effect3 = (ctx, a) => Observable.Empty<IAction>();
-			Func<Store<ComplexState>, IObservable<int>, IObservable<MyAction>> effect4 = (ctx, a) => Observable.Empty<MyAction>();
 
-			Assert.NotNull(Tools.ObservableEffectWrapper<Store<ComplexState>, ComplexState>(effect1));
-			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect2));
-			Assert.NotNull(Tools.ObservableEffectWrapper<Store<ComplexState>, ComplexState>(effect3));
-			//Assert.NotNull(Tools.ObservableStateEffectWrapper<Store<ComplexState>, ComplexState>(effect4));
+			var wrapped1 = Tools.ObservableEffectWrapper<IDispatchContext<ComplexState>, ComplexState>(effect1);
+			var wrapped2 = Tools.ObservableEffectWrapper<IDispatchContext<int>, int>(effect2);
+			var wrapped3 = Tools.ObservableEffectWrapper<IDispatchContext<int>, int>(effect3);
+
+			Assert.NotNull(wrapped1);
+			Assert.NotNull(wrapped2);
+			Assert.NotNull(wrapped3);
+
+			var obs1 = wrapped1(Observable.Empty<IDispatchContext<ComplexState>>());
+			var obs2 = wrapped2(Observable.Empty<IDispatchContext<int>>());
+			var obs3 = wrapped3(Observable.Empty<IDispatchContext<int>>());
+
+			Assert.NotNull(obs1);
+			Assert.NotNull(obs2);
+			Assert.NotNull(obs3);
 		}
 
 		public class SubState1 { }

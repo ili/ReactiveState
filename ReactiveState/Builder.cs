@@ -1,4 +1,6 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace ReactiveState
@@ -23,8 +25,83 @@ namespace ReactiveState
 			where TAction : IAction
 			=> new ConstructorReducerBuilder<TState, TAction>();
 
+		/// <summary>
+		/// Reserts property to default(TValue)
+		/// </summary>
+		/// <typeparam name="TState"></typeparam>
+		/// <typeparam name="TAction"></typeparam>
+		/// <typeparam name="TValue"></typeparam>
+		/// <param name="builder">builder</param>
+		/// <param name="memberExpression">member expression for member to reset</param>
+		/// <returns></returns>
 		public static ConstructorReducerBuilder<TState, TAction> Reset<TState, TAction, TValue>(this ConstructorReducerBuilder<TState, TAction> builder, Expression<Func<TState, TValue>> memberExpression)
 			where TAction : IAction
 			=> builder.Add(memberExpression, default(TValue));
+
+		/// <summary>
+		/// Resets property to <see cref="Enumerable.Empty{TResult}"/>
+		/// </summary>
+		/// <typeparam name="TState"></typeparam>
+		/// <typeparam name="TAction"></typeparam>
+		/// <typeparam name="TValue"></typeparam>
+		/// <param name="builder">builder</param>
+		/// <param name="memberExpression">member expression for member to reset</param>
+		/// <returns></returns>
+		public static ConstructorReducerBuilder<TState, TAction> Reset<TState, TAction, TValue>(this ConstructorReducerBuilder<TState, TAction> builder, Expression<Func<TState, IEnumerable<TValue>>> memberExpression)
+			where TAction : IAction
+			=> builder.Add(memberExpression, Enumerable.Empty<TValue>());
+
+		/// <summary>
+		/// Resets property to <see cref="Array.Empty{T}"/>
+		/// </summary>
+		/// <typeparam name="TState"></typeparam>
+		/// <typeparam name="TAction"></typeparam>
+		/// <typeparam name="TValue"></typeparam>
+		/// <param name="builder">builder</param>
+		/// <param name="memberExpression">member expression for member to reset</param>
+		/// <returns></returns>
+		public static ConstructorReducerBuilder<TState, TAction> Reset<TState, TAction, TValue>(this ConstructorReducerBuilder<TState, TAction> builder, Expression<Func<TState, IReadOnlyCollection<TValue>>> memberExpression)
+			where TAction : IAction
+			=> builder.Add(memberExpression, Array.Empty<TValue>());
+
+		/// <summary>
+		/// Resets property to <see cref="Array.Empty{T}"/>
+		/// </summary>
+		/// <typeparam name="TState"></typeparam>
+		/// <typeparam name="TAction"></typeparam>
+		/// <typeparam name="TValue"></typeparam>
+		/// <param name="builder">builder</param>
+		/// <param name="memberExpression">member expression for member to reset</param>
+		/// <returns></returns>
+		public static ConstructorReducerBuilder<TState, TAction> Reset<TState, TAction, TValue>(this ConstructorReducerBuilder<TState, TAction> builder, Expression<Func<TState, IList<TValue>>> memberExpression)
+			where TAction : IAction
+			=> builder.Add(memberExpression, Array.Empty<TValue>());
+
+		/// <summary>
+		/// Resets property to <see cref="Array.Empty{T}"/>
+		/// </summary>
+		/// <typeparam name="TState"></typeparam>
+		/// <typeparam name="TAction"></typeparam>
+		/// <typeparam name="TValue"></typeparam>
+		/// <param name="builder">builder</param>
+		/// <param name="memberExpression">member expression for member to reset</param>
+		/// <returns></returns>
+		public static ConstructorReducerBuilder<TState, TAction> Reset<TState, TAction, TValue>(this ConstructorReducerBuilder<TState, TAction> builder, Expression<Func<TState, ICollection<TValue>>> memberExpression)
+			where TAction : IAction
+			=> builder.Add(memberExpression, Array.Empty<TValue>());
+
+		/// <summary>
+		/// Resets property to <see cref="Array.Empty{T}"/>
+		/// </summary>
+		/// <typeparam name="TState"></typeparam>
+		/// <typeparam name="TAction"></typeparam>
+		/// <typeparam name="TValue"></typeparam>
+		/// <param name="builder">builder</param>
+		/// <param name="memberExpression">member expression for member to reset</param>
+		/// <returns></returns>
+		public static ConstructorReducerBuilder<TState, TAction> Reset<TState, TAction, TValue>(this ConstructorReducerBuilder<TState, TAction> builder, Expression<Func<TState, IReadOnlyList<TValue>>> memberExpression)
+			where TAction : IAction
+			=> builder.Add(memberExpression, Array.Empty<TValue>());
+
 	}
 }

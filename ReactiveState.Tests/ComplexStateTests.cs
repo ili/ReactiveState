@@ -50,7 +50,7 @@ namespace ReactiveState.Tests
 					ReadonlyStaticFields()
 					.Where(fi => fi.FieldType.LikeReducer())
 					.Select(_ => _.GetValue(null)!)
-					.ToArray()))
+					.ToArray())!)
 				.UseNotification()
 				.Build()
 				);

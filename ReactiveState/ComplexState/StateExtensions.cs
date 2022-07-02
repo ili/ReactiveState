@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace ReactiveState.ComplexState
@@ -10,6 +11,23 @@ namespace ReactiveState.ComplexState
 
 		public static string Key<T>()
 			=> Key(typeof(T));
+
+		public static KeyValuePair<string, object> Kvp<T>(this T value, string? key = null)
+			=> new KeyValuePair<string, object>(key ?? Key<T>(), value!);
+
+		public static IDictionary<string, object> ToDictionary<T>(this T value)
+		{
+			var dic = new Dictionary<string, object>();
+			return dic.Add(value);
+		}
+
+		public static IDictionary<string, object> Add<T>(this IDictionary<string, object> target, T value)
+		{
+			if (value != null)
+				target[Key<T>()] = value;
+
+			return target;
+		}	
 
 		public static string Key(Type type)
 			=> _defaultKeys.GetOrAdd(type, t =>

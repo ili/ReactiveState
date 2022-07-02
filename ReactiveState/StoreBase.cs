@@ -12,21 +12,21 @@ namespace ReactiveState
 	{
 		protected readonly BehaviorSubject<TState> _states;
 		private readonly Middleware<TState, TContext> _dispatcher;
-		private readonly ContextFactory<TState, TContext> _contextFactory;
 
-		public StoreBase(TState initialState, ContextFactory<TState, TContext> contextFactory, Middleware<TState, TContext> dispatcher)
+		public StoreBase(TState initialState, Middleware<TState, TContext> dispatcher)
 		{
 			_dispatcher = dispatcher;
-			_contextFactory = contextFactory;
 			_states = new BehaviorSubject<TState>(initialState);
 		}
+
+		protected abstract TContext CreateContext(IAction action, TState currentState);
 
 		public async Task<TState?> Dispatch(IAction action)
 		{
 			if (action == null)
 				throw new ArgumentNullException(nameof(action));
 
-			var context = _contextFactory(action, _states.Value, this, this);
+			var context = CreateContext(action, _states.Value);
 			return await _dispatcher.Dispatch(context);
 		}
 

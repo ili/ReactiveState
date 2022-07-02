@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ReactiveState
 {
-	public interface IDispatchContext<TState>
+	public interface IDispatchContext<TState>: ISetStateContext<TState>
 	{
 		IAction Action { get; }
 
@@ -17,7 +17,7 @@ namespace ReactiveState
 		IDispatcher<TState> Dispatcher { get; }
 	}
 
-	public interface IMutableStateContext<TState>: IDispatchContext<TState>
+	public interface ISetStateContext<TState>
 	{
 		void SetState(TState? state);
 	}
