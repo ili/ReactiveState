@@ -238,7 +238,7 @@ namespace ReactiveState
 
 						if (rd.StateType.Like<IPersistentState>())
 							invokeSetter = Expression.Call(mutableState,
-								nameof(IMutableState.Merge),
+								nameof(IMutableState.Set),
 								null,
 								invokeReducer);
 
@@ -259,7 +259,7 @@ namespace ReactiveState
 						return Expression.Block(new[] {st}, assignParamener,
 							rd.StateType.Like<IPersistentState>()
 								? Expression.Call(mutableState,
-									nameof(IMutableState.Merge),
+									nameof(IMutableState.Set),
 									null,
 									convertedBody)
 								: Expression.Call(mutableState,

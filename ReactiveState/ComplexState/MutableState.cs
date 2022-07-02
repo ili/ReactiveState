@@ -47,7 +47,7 @@ namespace ReactiveState.ComplexState
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-		public IMutableState Merge(IPersistentState state)
+		public IMutableState Set(IPersistentState state)
 		{
 			if (!ReferenceEquals(state, this))
 				foreach (var p in state)
