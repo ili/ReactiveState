@@ -7,19 +7,19 @@ namespace ReactiveState.ComplexState
 {
 	class MutableState : IMutableState
 	{
-		private readonly IState _source;
+		private readonly State _source;
 		private readonly ConcurrentDictionary<string, object?> _changes = new ConcurrentDictionary<string, object?>();
-		public MutableState(IState store)
+		public MutableState(State store)
 		{
 			_source = store;
 		}
 
-		public IState Commit() => new State(GetResult());
+		public IState Commit() => State.ApplyChanges(_source, _changes);
 
-		private IEnumerable<KeyValuePair<string, object?>> GetResult()
+		private IEnumerable<KeyValuePair<string, object>> GetResult()
 		{
-			foreach (var p in _changes)
-				yield return p;
+			foreach (var p in _changes.Where(_ => _.Value != null))
+				yield return p!;
 
 			foreach (var p in _source.Where(_ => !_changes.ContainsKey(_.Key)))
 				yield return p;
@@ -42,7 +42,7 @@ namespace ReactiveState.ComplexState
 		public bool ContainsKey(string key)
 			=> _changes.ContainsKey(key) || _source.ContainsKey(key);
 
-		public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
+		public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
 			=> GetResult().GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

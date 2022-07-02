@@ -35,7 +35,7 @@ namespace ReactiveState.ComplexState
 			throw new NotImplementedException();
 		}
 
-		public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
+		public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
 		{
 			throw new NotImplementedException();
 		}

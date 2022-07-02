@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace ReactiveState.ComplexState
 {
-	public interface IPersistentState : IEnumerable<KeyValuePair<string, object?>>
+	public interface IPersistentState : IEnumerable<KeyValuePair<string, object>>
 	{
 		T? Get<T>(string key) where T : class;
 

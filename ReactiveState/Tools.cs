@@ -192,7 +192,7 @@ namespace ReactiveState
 
 				// var condition = Expression.TypeIs(actionParam, r.ActionType);
 
-				var typedAction = Expression.Variable(r.ActionType);
+				var typedAction = Expression.Variable(r.ActionType, r.ActionType.Name);
 				var assignTypedAction = Expression.Assign(typedAction, Expression.TypeAs(actionParam, r.ActionType));
 				var condition = Expression.NotEqual(typedAction, Expression.Constant(null, r.ActionType));
 
@@ -210,15 +210,21 @@ namespace ReactiveState
 						.GetMethod(nameof(IPersistentState.Get))!
 						.MakeGenericMethod(rd.StateType);
 
-					Expression getValue = Expression.Call(mutableState,
+					Expression getValue = Expression.Call(stateParam,
 						getMethodInfo,
 						key);
 
 					if (rd.StateType.Like<IPersistentState>())
+						getValue = stateParam;
+
+					if (rd.StateType.Like<IMutableState>())
 						getValue = mutableState;
 
 					if (rd.Expression == null)
 					{
+						if (getValue.Type != rd.StateType)
+							getValue = Expression.Convert(getValue, rd.StateType);
+
 						var invokeReducer = Expression.Invoke(Expression.Constant(rd.Method),
 								getValue,
 								typedAction
