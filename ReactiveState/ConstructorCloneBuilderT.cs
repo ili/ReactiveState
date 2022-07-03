@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace ReactiveState
 {
@@ -33,7 +34,14 @@ namespace ReactiveState
 				.ToList();
 			pars.Insert(0, Expression.Parameter(typeof(T), "source"));
 
-			var constuctor = typeof(T).GetConstructors().Single();
+			var constuctors = typeof(T).GetConstructors().ToList();
+			var constuctor = constuctors.Where(_ => _.GetCustomAttributes<ConstructorBuilderAttribute>() != null)
+				.FirstOrDefault();
+
+			if (constuctor == null && (constuctors.Count == 0 || constuctors.Count > 1))
+				throw new InvalidOperationException($"{typeof(T)} declares {constuctors.Count} constuctors, but one expected, or use [ConstructorBuilderAttribute] to mark constructor for builder");
+
+			constuctor = constuctor ?? constuctors[0];
 
 			var constructorParameters = constuctor.GetParameters();
 			var invokeParameters = new Expression[constructorParameters.Length];

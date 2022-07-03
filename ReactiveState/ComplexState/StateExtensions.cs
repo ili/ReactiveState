@@ -15,16 +15,15 @@ namespace ReactiveState.ComplexState
 		public static KeyValuePair<string, object> Kvp<T>(this T value, string? key = null)
 			=> new KeyValuePair<string, object>(key ?? Key<T>(), value!);
 
-		public static IDictionary<string, object> ToDictionary<T>(this T value)
+		public static IDictionary<string, object?> ToDictionary<T>(this T? value)
 		{
-			var dic = new Dictionary<string, object>();
+			var dic = new Dictionary<string, object?>();
 			return dic.Add(value);
 		}
 
-		public static IDictionary<string, object> Add<T>(this IDictionary<string, object> target, T value)
+		public static IDictionary<string, object?> Add<T>(this IDictionary<string, object?> target, T? value)
 		{
-			if (value != null)
-				target[Key<T>()] = value;
+			target[Key<T>()] = value;
 
 			return target;
 		}	

@@ -79,7 +79,12 @@ namespace ReactiveState
 			}
 
 			protected override Expression VisitParameter(ParameterExpression node)
-				=> _rewriter[node];
+			{
+				if (_rewriter.TryGetValue(node, out var newNode))
+					return newNode;
+					
+				return node;
+			}
 
 		}
 
@@ -151,8 +156,8 @@ namespace ReactiveState
 			=> BuildComplexReducer<TState>(assembly.GetTypes().SelectMany(t => t
 				.ReadonlyStaticFields()
 					.Where(fi => fi.FieldType.LikeReducer())
-					.Select(_ => _.GetValue(null)!)
-					.ToArray()));
+					.Select(_ => _.GetValue(null)!))
+					.ToArray());
 
 		public static Reducer<IState, IAction> BuildComplexReducer(params object[] reducers)
 			=> BuildComplexReducer<IState>(reducers);
@@ -160,7 +165,7 @@ namespace ReactiveState
 		public static Reducer<TState, IAction> BuildComplexReducer<TState>(params object[] reducers)
 			where TState : IState
 		{
-			var stateParam = Expression.Parameter(typeof(IState), "state");
+			var stateParam = Expression.Parameter(typeof(TState), "state");
 			var actionParam = Expression.Parameter(typeof(IAction), "action");
 
 			var mutableState = Expression.Variable(typeof(IMutableState), "mutable");
@@ -263,7 +268,7 @@ namespace ReactiveState
 						var convertedBody =	new ReducerParameterRewriter(new Dictionary<ParameterExpression, Expression>
 							{
 								{ rd.Expression.Parameters[0], st },
-								{ rd.Expression.Parameters[1], actionParam }
+								{ rd.Expression.Parameters[1], typedAction }
 							})
 							.Visit(rd.Expression.Body);
 
@@ -290,8 +295,11 @@ namespace ReactiveState
 			})
 			.ToList();
 
-			var commitExpression = Expression.Call(mutableState,
+			Expression commitExpression = Expression.Call(mutableState,
 				typeof(IMutableState).GetMethod(nameof(IMutableState.Commit))!);
+
+			if (commitExpression.Type != typeof(TState))
+				commitExpression = Expression.Convert(commitExpression, typeof(TState));
 
 			invocations.Add(assignMutableState);
 
@@ -318,11 +326,15 @@ namespace ReactiveState
 		public static IEnumerable<Func<TContext, Task<IAction?>>> Effects<TContext, TState>(this Type type, params Type[] patterns)
 			where TContext : IDispatchContext<TState>
 			=> type.ReadonlyStaticFields()
-			.Where (_ => _.FieldType.LikeEffect<TContext, TState>(patterns))
+			.Where (_ => _.LikeEffect<TContext, TState>(patterns))
 			.Select(_ => _.GetValue(null)!)
 			.Select(_ => EffectWrapper<TContext, TState>(_))
 			;
 
+		public static bool LikeEffect<TContext, TState>(this FieldInfo field, params Type[] patterns)
+			where TContext : IDispatchContext<TState>
+			=> field.GetCustomAttribute<EffectAttribute>() != null
+				|| field.FieldType.LikeEffect<TContext, TState>(patterns);
 
 		public static bool LikeEffect<TContext, TState>(this Type type, params Type[] patterns)
 			where TContext : IDispatchContext<TState>
@@ -344,6 +356,11 @@ namespace ReactiveState
 				return false;
 
 			var funcGenericArguments = type.GetGenericArguments();
+
+			// protection against Cloners 
+			if (funcGenericArguments.Length == 3
+				&& funcGenericArguments[0] == funcGenericArguments[2])
+				return false;
 
 			var canNotWrap = funcGenericArguments.Any(_ => CanWrapEffectParameter<TContext, TState>(_) == false);
 
@@ -372,23 +389,11 @@ namespace ReactiveState
 		public static bool LikeObservableEffect<TContext, TState>(this Type type)
 			where TContext: IDispatchContext<TState>
 		{
-			var looksLikeEffect =
-				type.Like<Func<IObservable<TContext>, IObservable<IAction>>>()
+			return type
+				.Like<Func<IObservable<TContext>, IObservable<IAction>>>()
 				;
-
-			if (looksLikeEffect == false)
-				return false;
-
-			var funcGenericArguments = type.GetGenericArguments();
-			var actualStateType = (funcGenericArguments.Length == 3 ? funcGenericArguments[1] : funcGenericArguments[0])
-				.GetGenericArguments()[0];
-
-			if (actualStateType == typeof(TState))
-				return true;
-
-
-			return false;
 		}
+
 		public static IEnumerable<Func<IDispatchContext<TState>, Task<IAction?>>> Effects<TState>(this Assembly assembly, params Type[] patterns)
 			=> Effects<IDispatchContext<TState>, TState>(assembly, patterns);
 
@@ -427,7 +432,8 @@ namespace ReactiveState
 
 			var funcGenericArguments = type.GetGenericArguments();
 			var funcExpression = Expression.Constant(func);
-			var currentAction = Expression.Property(wrapperContextParam, nameof(IDispatchContext<TState>.Action));
+			var currentAction = Expression.MakeMemberAccess(wrapperContextParam,
+				typeof(IDispatchContext<TState>).GetProperties().First(x => x.Name == nameof(IDispatchContext<TState>.Action)));
 
 			var invokeParams = new List<Expression>();
 

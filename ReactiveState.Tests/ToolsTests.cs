@@ -53,7 +53,7 @@ namespace ReactiveState.Tests
 		private static readonly Func<Ctx, int, Task<MyAction?>> StateEffect08 = (a, b) => Task.FromResult<MyAction?>(null);
 
 		private static readonly Func<IObservable<IDispatchContext<int>>, IObservable<IAction?>> ObservableStateEffect01 = (b) => Observable.Return<IAction>(null);
-		private static readonly Func<IObservable<DispatchContext<int>>,  IObservable<IAction?>> ObservableStateEffect02 = (b) => Observable.Return<IAction>(null);
+		private static readonly Func<IObservable<DispatchContext<int>>, IObservable<IAction?>> ObservableStateEffect02 = (b) => Observable.Return<IAction>(null);
 
 		[Test]
 		public void ReadonlyStaticFieldsTest()
