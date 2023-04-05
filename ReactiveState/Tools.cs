@@ -11,16 +11,19 @@ namespace ReactiveState
 {
 	public static class Tools
 	{
-		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Assembly assembly, IStateTree<TState> stateTree)
-			=> assembly.GetTypes().SelectMany(_ => _.Reducers<TState>(stateTree));
+		public static IEnumerable<object> Reducers<TState>(this Assembly assembly, IStateTree<TState>? stateTree)
+			=>  assembly.GetTypes().SelectMany(_ => _.Reducers<TState>(stateTree));
 
-		public static IEnumerable<Reducer<TState, IAction>> Reducers<TState>(this Type type, IStateTree<TState> stateTree)
+		public static IEnumerable<object> Reducers<TState>(this Type type, IStateTree<TState>? stateTree)
 			=> ReadonlyStaticFields(type)
 			.Where(fi => fi.FieldType.LikeReducer(stateTree))
 			.Select(_ => _.GetValue(null)!)
-			.Select(_ => ReducerWrapper(_, stateTree));
+			;
 
-		public static bool LikeReducer<TState>(this Type type, IStateTree<TState> stateTree)
+		public static Reducer<TState, IAction> ToReducer<TState>(this IEnumerable<object> reducers, IStateTree<TState>? stateTree)
+			=> ReducerWrapper<TState>(reducers, stateTree);
+
+		public static bool LikeReducer<TState>(this Type type, IStateTree<TState>? stateTree)
 		{
 			if (!type.Like<Reducer<object, IAction>>())
 				return false;
@@ -38,71 +41,110 @@ namespace ReactiveState
 
 		public static Reducer<TState, IAction> Wrap<TState, TAction>(this Reducer<TState, TAction> reducer)
 			where TAction: IAction
-			=> ReducerWrapper<TState>(reducer, null);
+			=> ReducerWrapper<TState>(new[] { reducer }, null);
 
 		public static Reducer<TState, IAction> Wrap<TState, TSubState, TAction>(this Reducer<TSubState, TAction> reducer, IStateTree<TState> stateTree)
 			where TAction: IAction
-			=> ReducerWrapper<TState>(reducer, stateTree);
+			=> ReducerWrapper<TState>(new[] { reducer }, stateTree);
 
-		public static Reducer<TState, IAction> ReducerWrapper<TState>(object arg, IStateTree<TState>? stateTree)
+		public static Reducer<TState, IAction> ReducerWrapper<TState>(IEnumerable<object> reducers,
+			IStateTree<TState>? stateTree)
 		{
-			var type = arg.GetType();
-
-			if (type == typeof(Reducer<TState, IAction>))
-				return (Reducer<TState, IAction>)arg;
-
-			var actualStateType = type.GetGenericArguments()[0];
-			var actionType = type.GetGenericArguments()[1];
-
-			if (typeof(TState) != actualStateType && stateTree == null)
-				throw new ArgumentNullException(nameof(stateTree));
-
-
-			Expression reducerExpression = Expression.Constant(arg);
-
+			var bodies = new Dictionary<Type, List<Expression>>();
+			var convertedActions = new Dictionary<Type, ParameterExpression>();
 			var state = Expression.Parameter(typeof(TState), "state");
 			var action = Expression.Parameter(typeof(IAction), "action");
+			var resultState = Expression.Variable(typeof(TState), "result");
 
-			if (typeof(TState) != actualStateType)
+			foreach (var arg in reducers)
 			{
-				var actionParametrer = Expression.Parameter(actionType);
-				var stateParameter = Expression.Parameter(typeof(TState));
+				var type = arg.GetType();
 
-				var getterExpression = Expression.Invoke(
-					stateTree!.FindGetter(actualStateType)!,
-					stateParameter);
-				if (getterExpression == null)
-					throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {actualStateType.FullName} type");
+				var actualStateType = type.GetGenericArguments()[0];
+				var actionType = type.GetGenericArguments()[1];
 
-				var composer = stateTree.FindComposer(actualStateType)!;
+				if (typeof(TState) != actualStateType && stateTree == null)
+					throw new ArgumentNullException(nameof(stateTree));
 
-				reducerExpression = Expression.Lambda(
-					Expression.Invoke(composer,
+				if (!bodies.TryGetValue(actionType, out var body))
+				{
+					body = new List<Expression>();
+					bodies[actionType] = body;
+				}
+				if (!convertedActions.TryGetValue(actionType, out var convertedActionParam))
+				{
+					convertedActionParam = Expression.Variable(actionType);
+					body.Add(Expression.Assign(convertedActionParam,
+							Expression.Convert(action, actionType)
+						)
+					);
+					convertedActions[actionType] = convertedActionParam;
+				}
+
+				Expression reducerExpression = Expression.Constant(arg);
+
+
+				if (typeof(TState) != actualStateType)
+				{
+					var actionParametrer = Expression.Parameter(actionType);
+					var stateParameter = Expression.Parameter(typeof(TState));
+
+					var getterExpression = Expression.Invoke(
+						stateTree!.FindGetter(actualStateType)!,
+						stateParameter);
+					if (getterExpression == null)
+						throw new InvalidOperationException($"{typeof(TState).FullName} does not have subtree of {actualStateType.FullName} type");
+
+					var composer = stateTree.FindComposer(actualStateType)!;
+
+					reducerExpression = Expression.Lambda(
+						Expression.Invoke(composer,
+							stateParameter,
+							Expression.Invoke(reducerExpression,
+								getterExpression,
+								actionParametrer)),
 						stateParameter,
-						Expression.Invoke(reducerExpression, 
-							getterExpression,
-							actionParametrer)),
-					stateParameter,
-					actionParametrer);
+						actionParametrer);
+				}
+
+				body.Add(Expression.Assign(resultState, Expression.Invoke(reducerExpression, resultState, convertedActionParam)));
 			}
 
-			var mi = new object().GetType().GetMethod(nameof(object.GetType))!;
-			var isAssignableFrom = typeof(Type).GetMethod(nameof(Type.IsAssignableFrom))!;
-			var isAssignableFromExpression =
-				Expression.Call(
-					Expression.Constant(actionType),
-					isAssignableFrom,
-					Expression.Call(action, mi)
+			var wrapperBody = new List<Expression>();
+			wrapperBody.Add(Expression.Assign(resultState, state));
+
+			foreach (var gr in bodies)
+			{
+				var mi = new object().GetType().GetMethod(nameof(object.GetType))!;
+				var isAssignableFrom = typeof(Type).GetMethod(nameof(Type.IsAssignableFrom))!;
+				var isAssignableFromExpression =
+					Expression.Call(
+						Expression.Constant(gr.Key),
+						isAssignableFrom,
+						Expression.Call(action, mi)
+						);
+
+
+				var ifExpression = Expression.IfThen(
+					isAssignableFromExpression,
+					Expression.Block(new[] { convertedActions[gr.Key] }, gr.Value)
 					);
 
+				wrapperBody.Add(ifExpression);
+			}
 
-			var ifExpression = Expression.Condition(
-				isAssignableFromExpression,
-				Expression.Invoke(reducerExpression, state, Expression.Convert(action, actionType)),
-				state);
+			var returnTarget = Expression.Label(typeof(TState));
+			var returnExpression = Expression.Return(returnTarget, resultState, typeof(TState));
+			var returnLabel = Expression.Label(returnTarget, resultState);
 
+			wrapperBody.Add(returnExpression);
+			wrapperBody.Add(returnLabel);
 
-			var wrapper = Expression.Lambda<Reducer<TState, IAction>>(ifExpression, state, action);
+			var wrapper = Expression.Lambda<Reducer<TState, IAction>>(
+				Expression.Block(new[] { resultState }, wrapperBody),
+
+				state,
+				action);
 
 			return wrapper.Compile();
 		}

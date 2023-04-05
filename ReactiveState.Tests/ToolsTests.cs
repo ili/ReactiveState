@@ -16,7 +16,7 @@ namespace ReactiveState.Tests
 
 		private static readonly Reducer<int, IAction> SomeReducer = (a, b) => ++a;
 		private static readonly Reducer<long, IAction> LongReducer1 = (a, b) => ++a;
-		private static readonly Reducer<long, MyAction> LongReducer2 = (a, b) => 100;
+		private static readonly Reducer<long, MyAction> LongReducer2 = (a, b) => a + 100;
 
 		private static readonly Func<       int, IAction, IAction>          Effect01 = (a, b)    => null;
 		private static readonly Func<       int, IAction, Task<IAction>>    Effect02 = (a, b)    => Task.FromResult<IAction>(null);
@@ -61,8 +61,8 @@ namespace ReactiveState.Tests
 		[Test]
 		public void ReducerTest()
 		{
-			var field = GetType().Reducers<int>(null).Single();
-			Assert.AreEqual(2, field(1, null));
+			var field = GetType().Reducers<int>(null).ToReducer<int>(null);
+			Assert.AreEqual(2, field(1, new MyAction()));
 		}
 
 		[Test]
@@ -70,8 +70,11 @@ namespace ReactiveState.Tests
 		{
 			var field = GetType().Reducers<long>(null).ToArray();
 			Assert.AreEqual(2,   field.Length);
-			Assert.AreEqual(2,   field[0](1,  null));
-			Assert.AreEqual(100, field[1](21, new MyAction()));
+
+			var reducer = field.ToReducer<long>(null);
+
+			Assert.AreEqual(2,   reducer(1,  new EmptyAction()));
+			Assert.AreEqual(122, reducer(21, new MyAction()));
 		}
 
 		[Test]
@@ -82,6 +85,11 @@ namespace ReactiveState.Tests
 			Assert.AreEqual(0,   reducer(0, new MyGenericAction(0)));
 			Assert.AreEqual(100, reducer(0, new MyAction()));
 
+		}
+
+		public class EmptyAction : IAction
+		{
+			public string Type => throw new NotImplementedException();
 		}
 
 		public class MyAction : IAction
